@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="{{ request.locale.iso_code }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} - {{ shop.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    {{ content_for_header }}
+
+    <style>
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        .animate-slide-in-right {
+            animation: slideInRight 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        /* Custom slide-in for chat */
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="font-sans bg-slate-50 text-slate-900 min-h-screen relative overflow-x-hidden flex flex-col">
+
+    {% section 'header' %}
+
+    <main class="flex-grow" role="main">
+        {{ content_for_layout }}
+    </main>
+
+    {% section 'footer' %}
+
+    <!-- Trolley Drawer and Chat Widget -->
+    {% render 'trolley-drawer' %}
+    {% render 'chat-widget' %}
+
+    <!-- Scripts -->
+    <script src="{{ 'script.js' | asset_url }}" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
