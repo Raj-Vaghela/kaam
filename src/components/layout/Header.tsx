@@ -9,10 +9,15 @@ import {
     MapPin,
     HelpCircle,
     X,
+    LogOut,
+    Package,
+    ChevronDown,
 } from "lucide-react";
 import { CATEGORIES } from "@/data/mockData";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createBrowserClient } from "@supabase/ssr";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface HeaderProps {
     cartCount: number;
@@ -27,6 +32,47 @@ export default function Header({
 }: HeaderProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
+    const [user, setUser] = useState<SupabaseUser | null>(null);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+        };
+        getUser();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            (_event, session) => {
+                setUser(session?.user ?? null);
+            }
+        );
+
+        return () => subscription.unsubscribe();
+    }, [supabase.auth]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        setDropdownOpen(false);
+        window.location.href = "/";
+    };
 
     return (
         <header className="sticky top-0 z-40 bg-white shadow-md">
@@ -89,13 +135,68 @@ export default function Header({
 
                     {/* Icons */}
                     <div className="hidden md:flex items-center gap-8 flex-shrink-0">
-                        <Link
-                            href="/auth"
-                            className="flex flex-col items-center cursor-pointer text-slate-700 hover:text-emerald-800 group"
-                        >
-                            <User size={24} strokeWidth={1.5} />
-                            <span className="text-[10px] font-bold mt-1">Sign In</span>
-                        </Link>
+                        {user ? (
+                            <div className="relative" ref={dropdownRef}>
+                                <button
+                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                    className="flex flex-col items-center cursor-pointer text-slate-700 hover:text-emerald-800 group"
+                                >
+                                    <div className="relative">
+                                        <div className="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center">
+                                            <span className="text-white text-xs font-bold">
+                                                {user.email?.charAt(0).toUpperCase()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <span className="text-[10px] font-bold mt-1 flex items-center gap-0.5">
+                                        Account
+                                        <ChevronDown size={10} />
+                                    </span>
+                                </button>
+
+                                {dropdownOpen && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
+                                        <div className="px-4 py-2 border-b border-slate-100">
+                                            <p className="text-xs text-slate-500">Signed in as</p>
+                                            <p className="text-sm font-medium text-slate-900 truncate">
+                                                {user.email}
+                                            </p>
+                                        </div>
+                                        <Link
+                                            href="/account"
+                                            onClick={() => setDropdownOpen(false)}
+                                            className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                        >
+                                            <User size={16} />
+                                            My Account
+                                        </Link>
+                                        <Link
+                                            href="/account/orders"
+                                            onClick={() => setDropdownOpen(false)}
+                                            className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                        >
+                                            <Package size={16} />
+                                            My Orders
+                                        </Link>
+                                        <button
+                                            onClick={handleSignOut}
+                                            className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
+                                        >
+                                            <LogOut size={16} />
+                                            Sign Out
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <Link
+                                href="/auth"
+                                className="flex flex-col items-center cursor-pointer text-slate-700 hover:text-emerald-800 group"
+                            >
+                                <User size={24} strokeWidth={1.5} />
+                                <span className="text-[10px] font-bold mt-1">Sign In</span>
+                            </Link>
+                        )}
                         <button
                             onClick={onCartClick}
                             className="relative flex flex-col items-center cursor-pointer text-slate-700 hover:text-emerald-800 group"

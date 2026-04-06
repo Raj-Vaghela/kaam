@@ -2,14 +2,15 @@
 
 import { Star, Plus, Minus } from "lucide-react";
 import { useState } from "react";
-import { Product, CartItem } from "@/types";
+import { Product } from "@/types";
+import { useCart } from "@/context/CartContext";
 
 interface ProductCardProps {
     product: Product;
-    addToCart: (product: Product, qty: number) => void;
 }
 
-export default function ProductCard({ product, addToCart }: ProductCardProps) {
+export default function ProductCard({ product }: ProductCardProps) {
+    const { addToCart } = useCart();
     const [qty, setQty] = useState(1);
 
     const handleAdd = () => {

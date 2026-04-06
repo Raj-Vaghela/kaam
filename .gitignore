@@ -41,6 +41,10 @@ desktop.ini
 *.tsbuildinfo
 next-env.d.ts
 
+# Supabase local status
+status.json
+status.txt
+
 # Misc
 *.pem
 *.log
