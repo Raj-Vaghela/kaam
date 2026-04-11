@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Stripe from "stripe";
 import { CartItem } from "@/types";
-import { generateInvoiceNumber, storeConfig, calculateVAT } from "@/lib/invoice";
+import { calculateVAT } from "@/lib/invoice";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2025-01-27.acacia",
@@ -34,9 +34,7 @@ export async function addProduct(formData: FormData) {
         bestseller,
     });
 
-    if (error) {
-        return { success: false, message: error.message };
-    }
+    if (error) return { success: false, message: error.message };
 
     revalidatePath("/", "layout");
     revalidatePath("/admin/products");
@@ -45,68 +43,43 @@ export async function addProduct(formData: FormData) {
 }
 
 // =============================================
-// CHECKOUT ACTIONS (GUEST + AUTHENTICATED)
+// CHECKOUT — PaymentIntent based (modern Elements)
 // =============================================
-interface ShippingInfo {
-    fullName: string;
+interface CreatePaymentIntentArgs {
+    cart: CartItem[];
     email: string;
-    phone: string;
-    addressLine1: string;
-    addressLine2: string;
-    city: string;
-    postcode: string;
 }
 
-export async function createCheckoutSession(
-    cart: CartItem[],
-    shippingInfo: ShippingInfo
-) {
-    const supabase = await createClient();
+export async function createPaymentIntent({ cart, email }: CreatePaymentIntentArgs) {
+    if (!cart || cart.length === 0) {
+        return { success: false, error: "Your basket is empty" };
+    }
+    if (!email) {
+        return { success: false, error: "Email is required" };
+    }
 
-    // Get current user (optional - can be guest)
+    const supabase = await createClient();
     const {
         data: { user },
     } = await supabase.auth.getUser();
 
-    if (cart.length === 0) {
-        return { success: false, error: "Your cart is empty" };
-    }
-
-    if (!shippingInfo.email) {
-        return { success: false, error: "Email is required" };
-    }
-
-    // Calculate totals
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
     const { vatAmount, total } = calculateVAT(subtotal);
+    const amountInPence = Math.round(total * 100);
 
-    // Generate guest token for order tracking
-    const guestToken = crypto.randomUUID();
+    const guestToken = user ? null : crypto.randomUUID();
 
-    // Create order in database
+    // Create pending order — address will be filled in pre-confirm
     const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
             user_id: user?.id || null,
-            guest_email: user ? null : shippingInfo.email,
-            guest_token: user ? null : guestToken,
+            guest_email: user ? null : email,
+            guest_token: guestToken,
             status: "pending",
-            total: total,
-            shipping_address: {
-                fullName: shippingInfo.fullName,
-                phone: shippingInfo.phone,
-                addressLine1: shippingInfo.addressLine1,
-                addressLine2: shippingInfo.addressLine2,
-                city: shippingInfo.city,
-                postcode: shippingInfo.postcode,
-            },
-            billing_address: {
-                fullName: shippingInfo.fullName,
-                addressLine1: shippingInfo.addressLine1,
-                addressLine2: shippingInfo.addressLine2,
-                city: shippingInfo.city,
-                postcode: shippingInfo.postcode,
-            },
+            total,
+            shipping_address: {},
+            billing_address: {},
         })
         .select()
         .single();
@@ -116,7 +89,6 @@ export async function createCheckoutSession(
         return { success: false, error: "Failed to create order" };
     }
 
-    // Create order items
     const orderItems = cart.map((item) => ({
         order_id: order.id,
         product_id: item.id,
@@ -125,73 +97,42 @@ export async function createCheckoutSession(
         unit_price: item.price,
     }));
 
-    const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems);
-
+    const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
     if (itemsError) {
-        // Rollback - delete the order
         await supabase.from("orders").delete().eq("id", order.id);
         return { success: false, error: "Failed to create order items" };
     }
 
-    // Create Stripe checkout session
     try {
-        const lineItems = cart.map((item) => ({
-            price_data: {
-                currency: "gbp",
-                product_data: {
-                    name: item.name,
-                    images: item.image ? [item.image] : [],
-                },
-                unit_amount: Math.round(item.price * 100),
-            },
-            quantity: item.qty,
-        }));
-
-        // Add VAT as separate line item for transparency
-        lineItems.push({
-            price_data: {
-                currency: "gbp",
-                product_data: {
-                    name: `VAT (${storeConfig.vatRate}%)`,
-                    images: [],
-                },
-                unit_amount: Math.round(vatAmount * 100),
-            },
-            quantity: 1,
-        });
-
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ["card"],
-            line_items: lineItems,
-            mode: "payment",
-            success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&token=${order.guest_token || ""}`,
-            cancel_url: `${baseUrl}/checkout`,
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: amountInPence,
+            currency: "gbp",
+            automatic_payment_methods: { enabled: true },
+            receipt_email: email,
             metadata: {
                 order_id: order.id,
-                guest_token: guestToken,
+                guest_token: guestToken || "",
+                subtotal: subtotal.toFixed(2),
+                vat: vatAmount.toFixed(2),
             },
-            customer_email: shippingInfo.email,
-            billing_address_collection: "auto",
-            payment_intent_data: {
-                metadata: {
-                    order_id: order.id,
-                },
-            },
+            description: `GajjuExpress order ${order.id.slice(0, 8).toUpperCase()}`,
         });
 
-        // Update order with Stripe session ID
         await supabase
             .from("orders")
-            .update({ stripe_session_id: session.id })
+            .update({ stripe_session_id: paymentIntent.id })
             .eq("id", order.id);
 
-        return { success: true, url: session.url };
+        return {
+            success: true,
+            clientSecret: paymentIntent.client_secret,
+            orderId: order.id,
+            guestToken,
+            amount: total,
+            subtotal,
+            vatAmount,
+        };
     } catch (err: any) {
-        // Rollback - delete order items and order
         await supabase.from("order_items").delete().eq("order_id", order.id);
         await supabase.from("orders").delete().eq("id", order.id);
         console.error("Stripe error:", err);
@@ -199,25 +140,44 @@ export async function createCheckoutSession(
     }
 }
 
+// Update an order's shipping/billing address before payment confirmation.
+export async function updateOrderShipping(
+    orderId: string,
+    shipping: {
+        fullName: string;
+        phone?: string;
+        addressLine1: string;
+        addressLine2?: string;
+        city: string;
+        postcode: string;
+        country?: string;
+    }
+) {
+    const supabase = await createClient();
+    const { error } = await supabase
+        .from("orders")
+        .update({
+            shipping_address: shipping,
+            billing_address: shipping,
+        })
+        .eq("id", orderId);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+}
+
 // =============================================
 // ORDER LOOKUP (FOR GUESTS)
 // =============================================
 export async function getOrderByToken(token: string) {
     const supabase = await createClient();
-
     const { data: order, error } = await supabase
         .from("orders")
-        .select(`
-            *,
-            order_items (*)
-        `)
+        .select(`*, order_items (*)`)
         .eq("guest_token", token)
         .single();
 
-    if (error || !order) {
-        return { success: false, error: "Order not found" };
-    }
-
+    if (error || !order) return { success: false, error: "Order not found" };
     return { success: true, order };
 }
 
@@ -226,16 +186,12 @@ export async function getOrderByToken(token: string) {
 // =============================================
 export async function linkGuestOrdersToAccount(email: string) {
     const supabase = await createClient();
-
     const {
         data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-        return { success: false, error: "Must be logged in" };
-    }
+    if (!user) return { success: false, error: "Must be logged in" };
 
-    // Update all guest orders with this email to be linked to the user
     const { error } = await supabase
         .from("orders")
         .update({
@@ -246,9 +202,6 @@ export async function linkGuestOrdersToAccount(email: string) {
         .eq("guest_email", email)
         .is("user_id", null);
 
-    if (error) {
-        return { success: false, error: error.message };
-    }
-
+    if (error) return { success: false, error: error.message };
     return { success: true };
 }

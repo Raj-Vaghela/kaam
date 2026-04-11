@@ -1,39 +1,36 @@
-// Store configuration for invoices
+import { BRAND } from "./brand";
+
+// Store configuration for invoices — sourced from BRAND.
 export const storeConfig = {
-    name: "DesiMart Ltd",
+    name: BRAND.legalName,
     address: {
-        line1: "123 Spice Lane",
-        line2: "Brick Lane",
-        city: "London",
-        postcode: "E1 6QL",
-        country: "United Kingdom",
+        line1: BRAND.address.line1,
+        line2: BRAND.address.line2,
+        city: BRAND.address.city,
+        postcode: BRAND.address.postcode,
+        country: BRAND.address.country,
     },
     vatNumber: "GB123456789",
-    vatRate: 20, // 20% VAT
-    email: "orders@desimart.co.uk",
-    phone: "+44 20 1234 5678",
-    website: "https://desimart.co.uk",
+    vatRate: 20,
+    email: BRAND.contact.ordersEmail,
+    phone: BRAND.contact.phone,
+    website: "https://gajjuexpress.co.uk",
 };
 
-// Invoice number generation (format: INV-YYYYMM-XXXXX)
+// Invoice number generation (format: GJX-YYYYMM-XXXXX)
 export function generateInvoiceNumber(): string {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
-    const random = Math.floor(Math.random() * 99999)
-        .toString()
-        .padStart(5, "0");
-    return `INV-${year}${month}-${random}`;
+    const random = Math.floor(Math.random() * 99999).toString().padStart(5, "0");
+    return `GJX-${year}${month}-${random}`;
 }
 
-// Credit note number generation (format: CN-YYYYMM-XXXXX)
 export function generateCreditNoteNumber(): string {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
-    const random = Math.floor(Math.random() * 99999)
-        .toString()
-        .padStart(5, "0");
+    const random = Math.floor(Math.random() * 99999).toString().padStart(5, "0");
     return `CN-${year}${month}-${random}`;
 }
 
@@ -62,8 +59,10 @@ export interface InvoiceData {
     total: number;
 }
 
-// Calculate VAT from subtotal
-export function calculateVAT(subtotal: number, vatRate: number = storeConfig.vatRate): { vatAmount: number; total: number } {
+export function calculateVAT(
+    subtotal: number,
+    vatRate: number = storeConfig.vatRate
+): { vatAmount: number; total: number } {
     const vatAmount = subtotal * (vatRate / 100);
     const total = subtotal + vatAmount;
     return {

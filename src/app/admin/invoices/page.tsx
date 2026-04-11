@@ -1,96 +1,59 @@
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
-import { FileText, Download, Mail, Search, ArrowLeft, Calendar, User } from "lucide-react";
+import { FileText, Download, Mail, Calendar, User } from "lucide-react";
 
 export default async function AdminInvoicesPage() {
     const supabase = await createClient();
 
-    // Fetch all invoices with order details
     const { data: invoices, error } = await supabase
         .from("invoices")
-        .select(`
-            *,
-            orders (
-                id,
-                status,
-                guest_email,
-                user_id
-            )
-        `)
+        .select(`*, orders ( id, status, guest_email, user_id )`)
         .order("created_at", { ascending: false });
 
-    if (error) {
-        console.error("Failed to fetch invoices:", error);
-    }
+    if (error) console.error("Failed to fetch invoices:", error);
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Invoices</h1>
-                    <p className="text-sm text-slate-500">
-                        View and manage all invoices
-                    </p>
-                </div>
+        <div>
+            <div className="mb-10">
+                <h1 className="font-display text-5xl text-ink mb-2">Invoices</h1>
+                <p className="text-ink-mute">Every receipt, in one place.</p>
             </div>
 
-            {/* Invoices Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-200">
+            <div className="bg-cream-soft border border-cream-deep rounded-3xl overflow-hidden">
+                <table className="w-full text-sm">
+                    <thead className="bg-cream text-ink-mute text-xs font-semibold uppercase tracking-wider">
                         <tr>
-                            <th className="text-left px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                                Invoice
-                            </th>
-                            <th className="text-left px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                                Customer
-                            </th>
-                            <th className="text-left px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                                Date
-                            </th>
-                            <th className="text-left px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                                Total
-                            </th>
-                            <th className="text-left px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                                Type
-                            </th>
-                            <th className="text-right px-6 py-4 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                                Actions
-                            </th>
+                            <th className="text-left px-6 py-4">Invoice</th>
+                            <th className="text-left px-6 py-4">Customer</th>
+                            <th className="text-left px-6 py-4">Date</th>
+                            <th className="text-left px-6 py-4">Total</th>
+                            <th className="text-left px-6 py-4">Type</th>
+                            <th className="text-right px-6 py-4">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-cream-deep">
                         {invoices && invoices.length > 0 ? (
                             invoices.map((invoice: any) => (
-                                <tr key={invoice.id} className="hover:bg-slate-50 transition-colors">
+                                <tr key={invoice.id} className="hover:bg-cream/60 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                                                <FileText size={20} className="text-emerald-600" />
+                                            <div className="w-11 h-11 bg-accent-soft rounded-2xl flex items-center justify-center">
+                                                <FileText size={18} className="text-accent" />
                                             </div>
                                             <div>
-                                                <p className="font-medium text-slate-900">
-                                                    {invoice.invoice_number}
-                                                </p>
-                                                <p className="text-xs text-slate-500">
+                                                <p className="font-semibold text-ink">{invoice.invoice_number}</p>
+                                                <p className="text-xs text-ink-mute">
                                                     Order #{invoice.order_id?.slice(0, 8).toUpperCase()}
                                                 </p>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div>
-                                            <p className="font-medium text-slate-900">
-                                                {invoice.customer_name}
-                                            </p>
-                                            <p className="text-xs text-slate-500">
-                                                {invoice.customer_email}
-                                            </p>
-                                        </div>
+                                        <p className="font-medium text-ink">{invoice.customer_name}</p>
+                                        <p className="text-xs text-ink-mute">{invoice.customer_email}</p>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center gap-1.5 text-slate-600 text-sm">
-                                            <Calendar size={14} />
+                                        <div className="flex items-center gap-1.5 text-ink-soft">
+                                            <Calendar size={14} className="text-ink-mute" />
                                             {new Date(invoice.created_at).toLocaleDateString("en-GB", {
                                                 day: "numeric",
                                                 month: "short",
@@ -99,16 +62,15 @@ export default async function AdminInvoicesPage() {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="font-bold text-slate-900">
-                                            £{invoice.total.toFixed(2)}
-                                        </span>
+                                        <span className="font-semibold text-ink">£{invoice.total.toFixed(2)}</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span
-                                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${invoice.orders?.user_id
-                                                    ? "bg-blue-100 text-blue-700"
-                                                    : "bg-amber-100 text-amber-700"
-                                                }`}
+                                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
+                                                invoice.orders?.user_id
+                                                    ? "bg-leaf-soft text-leaf"
+                                                    : "bg-haldi/20 text-ink"
+                                            }`}
                                         >
                                             <User size={12} />
                                             {invoice.orders?.user_id ? "Account" : "Guest"}
@@ -121,20 +83,18 @@ export default async function AdminInvoicesPage() {
                                                     href={invoice.pdf_url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-accent bg-accent-soft rounded-full hover:bg-accent hover:text-white transition-colors"
                                                 >
-                                                    <Download size={14} />
-                                                    PDF
+                                                    <Download size={14} /> PDF
                                                 </a>
                                             )}
                                             <form action={`/api/admin/resend-invoice`} method="POST">
                                                 <input type="hidden" name="invoiceId" value={invoice.id} />
                                                 <button
                                                     type="submit"
-                                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-ink-soft bg-cream rounded-full hover:bg-cream-deep transition-colors"
                                                 >
-                                                    <Mail size={14} />
-                                                    Resend
+                                                    <Mail size={14} /> Resend
                                                 </button>
                                             </form>
                                         </div>
@@ -143,9 +103,9 @@ export default async function AdminInvoicesPage() {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={6} className="px-6 py-12 text-center">
-                                    <FileText size={40} className="mx-auto text-slate-300 mb-3" />
-                                    <p className="text-slate-500">No invoices yet</p>
+                                <td colSpan={6} className="px-6 py-16 text-center">
+                                    <FileText size={40} className="mx-auto text-cream-deep mb-3" />
+                                    <p className="text-ink-mute">No invoices yet</p>
                                 </td>
                             </tr>
                         )}

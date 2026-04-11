@@ -11,31 +11,30 @@ export default async function AdminProductsPage() {
 
     return (
         <div>
-            <div className="flex items-center justify-between mb-8">
-                <h1 className="text-2xl font-bold text-slate-900">Products</h1>
-                <Link
-                    href="/admin/products/new"
-                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2"
-                >
-                    <Plus size={18} />
-                    Add Product
+            <div className="flex items-center justify-between mb-10">
+                <div>
+                    <h1 className="font-display text-5xl text-ink mb-2">Products</h1>
+                    <p className="text-ink-mute">Everything in the aisle.</p>
+                </div>
+                <Link href="/admin/products/new" className="btn-primary inline-flex items-center gap-2 px-5 py-3">
+                    <Plus size={18} /> Add Product
                 </Link>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-4 border-b border-slate-200 flex items-center gap-4">
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <div className="bg-cream-soft border border-cream-deep rounded-3xl overflow-hidden">
+                <div className="p-5 border-b border-cream-deep">
+                    <div className="relative max-w-md">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-mute" size={18} />
                         <input
                             type="text"
-                            placeholder="Search products..."
-                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            placeholder="Search products…"
+                            className="w-full pl-11 pr-4 py-3 bg-cream border border-cream-deep rounded-full focus:outline-none focus:border-accent text-sm"
                         />
                     </div>
                 </div>
 
                 <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 text-slate-500 font-medium uppercase tracking-wider">
+                    <thead className="bg-cream text-ink-mute text-xs font-semibold uppercase tracking-wider">
                         <tr>
                             <th className="px-6 py-4">Product</th>
                             <th className="px-6 py-4">Category</th>
@@ -44,34 +43,32 @@ export default async function AdminProductsPage() {
                             <th className="px-6 py-4 text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
+                    <tbody className="divide-y divide-cream-deep">
                         {products?.map((product) => (
-                            <tr key={product.id} className="hover:bg-slate-50 transition-colors">
+                            <tr key={product.id} className="hover:bg-cream/60 transition-colors">
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
                                         <img
                                             src={product.image_url || "https://placehold.co/100"}
                                             alt={product.name}
-                                            className="w-10 h-10 rounded object-cover bg-slate-100"
+                                            className="w-11 h-11 rounded-xl object-cover bg-cream"
                                         />
-                                        <span className="font-bold text-slate-900">{product.name}</span>
+                                        <span className="font-semibold text-ink">{product.name}</span>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 text-slate-600">{product.category}</td>
-                                <td className="px-6 py-4 font-mono font-medium text-slate-900">
-                                    £{product.price.toFixed(2)}
-                                </td>
+                                <td className="px-6 py-4 text-ink-soft">{product.category}</td>
+                                <td className="px-6 py-4 font-semibold text-ink">£{product.price.toFixed(2)}</td>
                                 <td className="px-6 py-4">
-                                    <span className={`inline-flex py-1 px-2.5 rounded-full text-xs font-bold leading-4 ${product.stock > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-                                        {product.stock > 0 ? `${product.stock} in stock` : 'Out of Stock'}
+                                    <span className={`inline-flex py-1 px-3 rounded-full text-xs font-semibold ${product.stock > 0 ? "bg-leaf-soft text-leaf" : "bg-rose/10 text-rose"}`}>
+                                        {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <div className="flex justify-end gap-2">
-                                        <button className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded">
+                                        <button className="p-2 text-ink-mute hover:text-accent hover:bg-accent-soft rounded-xl transition-colors">
                                             <Edit size={16} />
                                         </button>
-                                        <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded">
+                                        <button className="p-2 text-ink-mute hover:text-rose hover:bg-rose/10 rounded-xl transition-colors">
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
@@ -80,8 +77,8 @@ export default async function AdminProductsPage() {
                         ))}
                         {(!products || products.length === 0) && (
                             <tr>
-                                <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                                    No products found. Add your first product!
+                                <td colSpan={5} className="px-6 py-12 text-center text-ink-mute">
+                                    No products yet. Add your first.
                                 </td>
                             </tr>
                         )}

@@ -5,23 +5,15 @@ import { User, Package, MapPin, LogOut } from "lucide-react";
 
 export default async function AccountPage() {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) redirect("/auth?redirect=/account");
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-        redirect("/auth?redirect=/account");
-    }
-
-    // Get user profile
     const { data: profile } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
 
-    // Get recent orders
     const { data: orders } = await supabase
         .from("orders")
         .select("*")
@@ -30,131 +22,95 @@ export default async function AccountPage() {
         .limit(5);
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8">
-            <h1 className="text-3xl font-serif font-bold text-slate-900 mb-8">
-                My Account
-            </h1>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="mb-10">
+                <p className="text-xs font-semibold tracking-widest uppercase text-accent mb-2">
+                    Welcome back
+                </p>
+                <h1 className="font-display text-5xl text-ink">My account</h1>
+            </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-4 gap-8">
                 {/* Sidebar */}
-                <div className="space-y-2">
-                    <Link
-                        href="/account"
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-50 text-emerald-700 font-medium"
-                    >
-                        <User size={20} />
-                        Profile
+                <nav className="md:col-span-1 space-y-1">
+                    <Link href="/account" className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-accent-soft text-accent-deep font-semibold">
+                        <User size={18} /> Profile
                     </Link>
-                    <Link
-                        href="/account/orders"
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
-                    >
-                        <Package size={20} />
-                        Orders
+                    <Link href="/account/orders" className="flex items-center gap-3 px-4 py-3 rounded-2xl text-ink-soft hover:bg-cream-soft transition-colors">
+                        <Package size={18} /> Orders
                     </Link>
-                    <Link
-                        href="/auth/signout"
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                        <LogOut size={20} />
-                        Sign Out
+                    <Link href="/auth/signout" className="flex items-center gap-3 px-4 py-3 rounded-2xl text-rose hover:bg-cream-soft transition-colors">
+                        <LogOut size={18} /> Sign Out
                     </Link>
-                </div>
+                </nav>
 
-                {/* Main Content */}
-                <div className="md:col-span-2 space-y-6">
-                    {/* Profile Card */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4">
-                            Profile Information
-                        </h2>
-                        <div className="space-y-4">
+                {/* Main */}
+                <div className="md:col-span-3 space-y-6">
+                    <div className="bg-cream-soft border border-cream-deep rounded-3xl p-8">
+                        <h2 className="font-display text-2xl text-ink mb-5">Profile</h2>
+                        <dl className="space-y-4">
                             <div>
-                                <label className="block text-sm text-slate-500 mb-1">Email</label>
-                                <p className="font-medium text-slate-900">{user.email}</p>
+                                <dt className="text-xs uppercase tracking-wider text-ink-mute mb-1">Email</dt>
+                                <dd className="text-ink font-medium">{user.email}</dd>
                             </div>
                             <div>
-                                <label className="block text-sm text-slate-500 mb-1">
-                                    Full Name
-                                </label>
-                                <p className="font-medium text-slate-900">
-                                    {profile?.full_name || "Not set"}
-                                </p>
+                                <dt className="text-xs uppercase tracking-wider text-ink-mute mb-1">Full name</dt>
+                                <dd className="text-ink font-medium">{profile?.full_name || "Not set"}</dd>
                             </div>
                             <div>
-                                <label className="block text-sm text-slate-500 mb-1">Phone</label>
-                                <p className="font-medium text-slate-900">
-                                    {profile?.phone || "Not set"}
-                                </p>
+                                <dt className="text-xs uppercase tracking-wider text-ink-mute mb-1">Phone</dt>
+                                <dd className="text-ink font-medium">{profile?.phone || "Not set"}</dd>
                             </div>
-                        </div>
+                        </dl>
                     </div>
 
-                    {/* Address Card */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                            <MapPin size={20} className="text-emerald-600" />
-                            Saved Address
+                    <div className="bg-cream-soft border border-cream-deep rounded-3xl p-8">
+                        <h2 className="font-display text-2xl text-ink mb-5 flex items-center gap-2">
+                            <MapPin size={20} className="text-accent" /> Saved address
                         </h2>
                         {profile?.address_line1 ? (
-                            <div className="text-slate-700">
-                                <p>{profile.address_line1}</p>
-                                {profile.address_line2 && <p>{profile.address_line2}</p>}
-                                <p>
-                                    {profile.city}, {profile.postcode}
-                                </p>
-                            </div>
+                            <address className="not-italic text-ink leading-relaxed">
+                                {profile.address_line1}<br />
+                                {profile.address_line2 && <>{profile.address_line2}<br /></>}
+                                {profile.city}, {profile.postcode}
+                            </address>
                         ) : (
-                            <p className="text-slate-500">No address saved yet.</p>
+                            <p className="text-ink-mute">No address saved yet.</p>
                         )}
                     </div>
 
-                    {/* Recent Orders */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold text-slate-900">Recent Orders</h2>
-                            <Link
-                                href="/account/orders"
-                                className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
-                            >
-                                View All
+                    <div className="bg-cream-soft border border-cream-deep rounded-3xl p-8">
+                        <div className="flex items-center justify-between mb-5">
+                            <h2 className="font-display text-2xl text-ink">Recent orders</h2>
+                            <Link href="/account/orders" className="text-sm font-semibold text-accent hover:text-accent-deep">
+                                View all →
                             </Link>
                         </div>
                         {orders && orders.length > 0 ? (
-                            <div className="space-y-3">
+                            <ul className="divide-y divide-cream-deep">
                                 {orders.map((order) => (
-                                    <div
-                                        key={order.id}
-                                        className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0"
-                                    >
+                                    <li key={order.id} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
                                         <div>
-                                            <p className="font-medium text-slate-900">
-                                                Order #{order.id.slice(-8).toUpperCase()}
+                                            <p className="font-display text-lg text-ink">
+                                                #{order.id.slice(-8).toUpperCase()}
                                             </p>
-                                            <p className="text-sm text-slate-500">
-                                                {new Date(order.created_at).toLocaleDateString()}
+                                            <p className="text-xs text-ink-mute">
+                                                {new Date(order.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                                             </p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-bold text-slate-900">
-                                                £{Number(order.total).toFixed(2)}
-                                            </p>
-                                            <span
-                                                className={`text-xs px-2 py-1 rounded-full ${order.status === "paid"
-                                                        ? "bg-emerald-100 text-emerald-700"
-                                                        : order.status === "pending"
-                                                            ? "bg-amber-100 text-amber-700"
-                                                            : "bg-slate-100 text-slate-600"
-                                                    }`}
-                                            >
-                                                {order.status}
-                                            </span>
+                                            <p className="font-display text-lg text-ink">£{Number(order.total).toFixed(2)}</p>
+                                            <span className={`inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold ${
+                                                order.status === "paid" ? "bg-leaf-soft text-leaf" :
+                                                order.status === "pending" ? "bg-haldi-soft text-haldi" :
+                                                "bg-cream-deep text-ink-mute"
+                                            }`}>{order.status}</span>
                                         </div>
-                                    </div>
+                                    </li>
                                 ))}
-                            </div>
+                            </ul>
                         ) : (
-                            <p className="text-slate-500">No orders yet.</p>
+                            <p className="text-ink-mute">No orders yet.</p>
                         )}
                     </div>
                 </div>

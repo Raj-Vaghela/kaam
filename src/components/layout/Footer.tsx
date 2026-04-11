@@ -1,242 +1,161 @@
 "use client";
 
-import { MapPin, Phone, MessageSquare } from "lucide-react";
+import { MapPin, Phone, Mail, Instagram, Facebook } from "lucide-react";
 import { useState } from "react";
+import Image from "next/image";
+import { BRAND } from "@/lib/brand";
 
 export default function Footer() {
     const [email, setEmail] = useState("");
     const [subscribing, setSubscribing] = useState(false);
+    const [done, setDone] = useState(false);
 
     const handleSubscribe = async () => {
         if (!email) return;
         setSubscribing(true);
-        // TODO: Replace with Supabase newsletter subscription
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((r) => setTimeout(r, 500));
         setSubscribing(false);
         setEmail("");
-        alert("Subscribed! Thank you for joining our newsletter.");
+        setDone(true);
+        setTimeout(() => setDone(false), 3000);
     };
 
     return (
-        <footer className="bg-slate-900 text-slate-300 pt-16 pb-8 border-t border-emerald-900">
-            <div className="max-w-7xl mx-auto px-4">
-                {/* Top Section: Brand & Newsletter */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 border-b border-slate-800 pb-12">
+        <footer className="bg-[var(--gajju-teal-deep)] text-cream/90 mt-24">
+            <div className="bandhani-divider" />
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-10">
+                {/* Top: brand + newsletter */}
+                <div className="grid lg:grid-cols-2 gap-12 mb-16 pb-16 border-b border-white/10">
                     <div>
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="bg-emerald-800 text-white p-1.5 rounded-sm">
-                                <span className="font-serif font-black text-xl leading-none block">
-                                    D
-                                </span>
-                            </div>
-                            <h2 className="text-2xl font-serif font-bold text-white tracking-tight">
-                                DESI<span className="text-emerald-500">MART</span>
-                            </h2>
-                        </div>
-                        <p className="text-slate-400 text-sm max-w-md">
-                            Bringing the authentic taste of India to UK homes since 2010.
-                            Fresh ingredients, premium spices, and trusted brands delivered
-                            to your door.
+                        <Image
+                            src={BRAND.logo.horizontal}
+                            alt={BRAND.name}
+                            width={200}
+                            height={52}
+                            className="object-contain mb-5 brightness-0 invert opacity-95"
+                        />
+                        <p className="font-display text-2xl text-cream leading-tight mb-2">
+                            {BRAND.taglineEn}
+                        </p>
+                        <p className="font-[var(--font-hind)] text-base text-haldi">
+                            {BRAND.tagline}
+                        </p>
+                        <p className="text-sm text-cream/70 mt-5 max-w-md leading-relaxed">
+                            {BRAND.description} Bringing the warmth of an Indian kitchen to UK
+                            homes since {BRAND.foundedYear}.
                         </p>
                     </div>
-                    <div className="w-full md:w-auto bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                        <h3 className="text-white font-bold mb-2">Join our newsletter</h3>
-                        <p className="text-xs text-slate-400 mb-4">
-                            Get £10 off your first order over £60.
+
+                    <div className="lg:justify-self-end w-full max-w-md">
+                        <h3 className="font-display text-2xl text-cream mb-2">
+                            Sign up. Get £10 off.
+                        </h3>
+                        <p className="text-sm text-cream/70 mb-5">
+                            New flavours, recipes from our kitchen, and £10 off your first order
+                            over £60.
                         </p>
                         <div className="flex gap-2">
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Enter your email"
-                                className="bg-slate-900 border border-slate-700 text-white px-4 py-2 rounded text-sm focus:outline-none focus:border-emerald-500 w-full md:w-64"
+                                placeholder="your@email.com"
+                                className="flex-grow bg-white/10 border border-white/20 text-cream placeholder:text-cream/50 px-5 py-3.5 rounded-full text-sm focus:outline-none focus:border-haldi focus:bg-white/15 transition-all"
                             />
                             <button
                                 onClick={handleSubscribe}
                                 disabled={subscribing}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-sm font-bold transition-colors disabled:opacity-50"
+                                className="bg-accent hover:bg-[var(--gajju-terracotta-deep)] text-white px-6 py-3.5 rounded-full text-sm font-semibold transition-colors disabled:opacity-50 whitespace-nowrap"
                             >
-                                {subscribing ? "..." : "Subscribe"}
+                                {subscribing ? "…" : done ? "Thanks!" : "Subscribe"}
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Middle Section: Links */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+                {/* Link columns */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-16">
+                    {[
+                        {
+                            title: "Shop",
+                            links: ["New Arrivals", "Bestsellers", "Festive Specials", "Gift Hampers"],
+                        },
+                        {
+                            title: "Help",
+                            links: ["Delivery", "Returns", "Track Order", "FAQs"],
+                        },
+                        {
+                            title: "About",
+                            links: ["Our Story", "Sourcing", "Sustainability", "Careers"],
+                        },
+                    ].map((col) => (
+                        <div key={col.title}>
+                            <h4 className="font-display text-lg text-cream mb-5">{col.title}</h4>
+                            <ul className="space-y-3 text-sm">
+                                {col.links.map((l) => (
+                                    <li key={l}>
+                                        <a href="#" className="text-cream/70 hover:text-haldi transition-colors">
+                                            {l}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))}
                     <div>
-                        <h4 className="text-white font-bold mb-4 font-serif text-lg">
-                            Shop
-                        </h4>
-                        <ul className="space-y-2 text-sm">
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    New Arrivals
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    Best Sellers
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    Offers
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    Seasonal Specials
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 className="text-white font-bold mb-4 font-serif text-lg">
-                            Help & Support
-                        </h4>
-                        <ul className="space-y-2 text-sm">
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    Delivery Information
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    Returns & Refunds
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    Track My Order
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    FAQs
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 className="text-white font-bold mb-4 font-serif text-lg">
-                            About Us
-                        </h4>
-                        <ul className="space-y-2 text-sm">
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    Our Story
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    Careers
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    Sustainability
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="#"
-                                    className="hover:text-emerald-400 transition-colors"
-                                >
-                                    Store Locator
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 className="text-white font-bold mb-4 font-serif text-lg">
-                            Contact
-                        </h4>
-                        <ul className="space-y-3 text-sm">
+                        <h4 className="font-display text-lg text-cream mb-5">Visit Us</h4>
+                        <ul className="space-y-3 text-sm text-cream/70">
                             <li className="flex items-start gap-3">
-                                <MapPin
-                                    size={16}
-                                    className="text-emerald-500 mt-0.5 shrink-0"
-                                />
+                                <MapPin size={15} className="text-haldi mt-0.5 shrink-0" />
                                 <span>
-                                    123 Wembley High Rd,
+                                    {BRAND.address.line1}, {BRAND.address.city}
                                     <br />
-                                    London, HA9 6AH
+                                    {BRAND.address.postcode}
                                 </span>
                             </li>
                             <li className="flex items-center gap-3">
-                                <Phone size={16} className="text-emerald-500 shrink-0" />
-                                <span>+44 20 7123 4567</span>
+                                <Phone size={15} className="text-haldi shrink-0" />
+                                <span>{BRAND.contact.phone}</span>
                             </li>
                             <li className="flex items-center gap-3">
-                                <MessageSquare
-                                    size={16}
-                                    className="text-emerald-500 shrink-0"
-                                />
-                                <span>support@desimart.co.uk</span>
+                                <Mail size={15} className="text-haldi shrink-0" />
+                                <span>{BRAND.contact.email}</span>
                             </li>
                         </ul>
+                        <div className="flex gap-3 mt-5">
+                            <a
+                                href={BRAND.social.instagram}
+                                aria-label="Instagram"
+                                className="w-9 h-9 rounded-full bg-white/10 hover:bg-haldi hover:text-[var(--gajju-teal-deep)] flex items-center justify-center transition-colors"
+                            >
+                                <Instagram size={16} />
+                            </a>
+                            <a
+                                href={BRAND.social.facebook}
+                                aria-label="Facebook"
+                                className="w-9 h-9 rounded-full bg-white/10 hover:bg-haldi hover:text-[var(--gajju-teal-deep)] flex items-center justify-center transition-colors"
+                            >
+                                <Facebook size={16} />
+                            </a>
+                        </div>
                     </div>
                 </div>
 
-                {/* Bottom Section: Legal & Social */}
-                <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
-                    <p>&copy; 2025 DesiMart Premier Ltd. All rights reserved.</p>
+                {/* Legal */}
+                <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-cream/60">
+                    <p>
+                        © {new Date().getFullYear()} {BRAND.legalName}. Made with care in London.
+                    </p>
                     <div className="flex gap-6">
-                        <a href="#" className="hover:text-white transition-colors">
-                            Privacy Policy
+                        <a href="#" className="hover:text-haldi transition-colors">
+                            Privacy
                         </a>
-                        <a href="#" className="hover:text-white transition-colors">
-                            Terms of Service
+                        <a href="#" className="hover:text-haldi transition-colors">
+                            Terms
                         </a>
-                        <a href="#" className="hover:text-white transition-colors">
-                            Cookie Policy
+                        <a href="#" className="hover:text-haldi transition-colors">
+                            Cookies
                         </a>
-                    </div>
-                    <div className="flex items-center gap-2 opacity-50 grayscale hover:grayscale-0 transition-all duration-300">
-                        <div className="h-6 w-10 bg-white rounded flex items-center justify-center font-bold text-slate-800 text-[8px]">
-                            VISA
-                        </div>
-                        <div className="h-6 w-10 bg-white rounded flex items-center justify-center font-bold text-slate-800 text-[8px]">
-                            MC
-                        </div>
-                        <div className="h-6 w-10 bg-white rounded flex items-center justify-center font-bold text-slate-800 text-[8px]">
-                            PAYPAL
-                        </div>
                     </div>
                 </div>
             </div>

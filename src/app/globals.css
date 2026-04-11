@@ -1,59 +1,204 @@
 @import "tailwindcss";
 
+/* ============================================
+   GajjuExpress Design Tokens — "Modern Bazaar"
+   Inspired by the turbaned mascot logo
+   ============================================ */
+
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* Brand palette (extracted from logo) */
+  --gajju-teal: #1f5f6b;
+  --gajju-teal-deep: #134048;
+  --gajju-teal-soft: #e6eef0;
+  --gajju-terracotta: #c66b3d;
+  --gajju-terracotta-deep: #a4522a;
+  --gajju-terracotta-soft: #f7e8de;
+  --gajju-cream: #f5f0e6;
+  --gajju-cream-soft: #faf6ec;
+  --gajju-cream-deep: #ebe3d2;
+  --gajju-ink: #1a1714;
+  --gajju-ink-soft: #4a423b;
+  --gajju-ink-mute: #8a8178;
+  --gajju-haldi: #e8b547;
+  --gajju-haldi-soft: #fbf1d8;
+  --gajju-leaf: #6b8e4e;
+  --gajju-leaf-soft: #e9efde;
+  --gajju-rose: #b94a4a;
+
+  /* Semantic */
+  --background: var(--gajju-cream);
+  --foreground: var(--gajju-ink);
+
+  /* Shadows — warm, soft */
+  --shadow-soft: 0 1px 2px rgba(26, 23, 20, 0.04),
+    0 4px 16px rgba(26, 23, 20, 0.06);
+  --shadow-lift: 0 4px 8px rgba(26, 23, 20, 0.06),
+    0 16px 40px rgba(26, 23, 20, 0.1);
+  --shadow-bloom: 0 8px 32px rgba(198, 107, 61, 0.18);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-brand: var(--gajju-teal);
+  --color-brand-deep: var(--gajju-teal-deep);
+  --color-brand-soft: var(--gajju-teal-soft);
+  --color-accent: var(--gajju-terracotta);
+  --color-accent-deep: var(--gajju-terracotta-deep);
+  --color-accent-soft: var(--gajju-terracotta-soft);
+  --color-cream: var(--gajju-cream);
+  --color-cream-soft: var(--gajju-cream-soft);
+  --color-cream-deep: var(--gajju-cream-deep);
+  --color-ink: var(--gajju-ink);
+  --color-ink-soft: var(--gajju-ink-soft);
+  --color-ink-mute: var(--gajju-ink-mute);
+  --color-haldi: var(--gajju-haldi);
+  --color-haldi-soft: var(--gajju-haldi-soft);
+  --color-leaf: var(--gajju-leaf);
+  --color-leaf-soft: var(--gajju-leaf-soft);
+  --color-rose: var(--gajju-rose);
+
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-fraunces);
+  --font-script: var(--font-hind);
 }
 
+html,
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Custom scrollbar hide utility */
+::selection {
+  background: var(--gajju-terracotta);
+  color: white;
+}
+
+/* Subtle paper-grain background for hero/cards (no wallpaper, just texture) */
+.grain {
+  position: relative;
+}
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+  background-image: radial-gradient(
+    rgba(26, 23, 20, 0.06) 1px,
+    transparent 1px
+  );
+  background-size: 3px 3px;
+}
+
+/* Block-print divider — subtle Gujarati motif as svg-in-css */
+.bandhani-divider {
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 14' fill='none'%3E%3Ccircle cx='6' cy='7' r='1.5' fill='%23c66b3d'/%3E%3Ccircle cx='18' cy='7' r='2.5' fill='none' stroke='%231f5f6b' stroke-width='1'/%3E%3Ccircle cx='30' cy='7' r='1.5' fill='%23c66b3d'/%3E%3Ccircle cx='42' cy='7' r='2.5' fill='none' stroke='%231f5f6b' stroke-width='1'/%3E%3Ccircle cx='54' cy='7' r='1.5' fill='%23c66b3d'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 60px 14px;
+  background-position: center;
+  opacity: 0.6;
+}
+
+/* Custom scrollbar hide */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-/* Custom animations */
+/* Animations */
 @keyframes slide-in-from-right {
   from {
     transform: translateX(100%);
   }
-
   to {
     transform: translateX(0);
   }
 }
-
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
 .animate-in.slide-in-from-right {
-  animation: slide-in-from-right 0.3s ease-out;
+  animation: slide-in-from-right 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.animate-fade-in {
+  animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-float {
+  animation: float-slow 4s ease-in-out infinite;
 }
 
-/* Line clamp utility */
+/* Line clamps */
 .line-clamp-1 {
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Focus rings — accessible, branded */
+:focus-visible {
+  outline: 2px solid var(--gajju-terracotta);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Buttons — semantic helpers */
+.btn-primary {
+  background: var(--gajju-terracotta);
+  color: white;
+  font-weight: 600;
+  border-radius: 9999px;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow-bloom);
+}
+.btn-primary:hover {
+  background: var(--gajju-terracotta-deep);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--gajju-teal-deep);
+  border: 1.5px solid var(--gajju-teal);
+  font-weight: 600;
+  border-radius: 9999px;
+  transition: all 0.2s;
+}
+.btn-secondary:hover {
+  background: var(--gajju-teal);
+  color: white;
 }
