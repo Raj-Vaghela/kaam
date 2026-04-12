@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import ProductCard from "@/components/product/ProductCard";
+import { toProduct } from "@/types";
 
 export default async function ProductsPage() {
     const supabase = await createClient();
@@ -24,18 +25,7 @@ export default async function ProductsPage() {
                 {products?.map((product) => (
                     <ProductCard
                         key={product.id}
-                        product={{
-                            id: product.id,
-                            name: product.name,
-                            category: product.category,
-                            price: Number(product.price),
-                            imgUrl: product.image_url || "https://placehold.co/400",
-                            unit: product.unit,
-                            weight_kg: 0,
-                            rating: product.rating || 0,
-                            bestseller: product.bestseller || false,
-                            clubPrice: product.club_price ? Number(product.club_price) : null,
-                        }}
+                        product={toProduct(product)}
                     />
                 ))}
             </div>

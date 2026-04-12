@@ -9,7 +9,17 @@ export default async function AdminInvoicesPage() {
         .select(`*, orders ( id, status, guest_email, user_id )`)
         .order("created_at", { ascending: false });
 
-    if (error) console.error("Failed to fetch invoices:", error);
+    if (error) {
+        console.error("Failed to fetch invoices:", error);
+        return (
+            <div>
+                <div className="mb-10">
+                    <h1 className="font-display text-5xl text-ink mb-2">Invoices</h1>
+                    <p className="text-rose">Failed to load invoices. Please try again.</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div>

@@ -164,7 +164,17 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
         .select()
         .single();
 
-    if (invoiceError) console.error("Failed to create invoice:", invoiceError);
+    if (invoiceError) {
+        console.error("Failed to create invoice:", invoiceError);
+        // Don't mark as paid without a linked invoice
+        const { error: updateError } = await supabase
+            .from("orders")
+            .update({ status: "payment_received" })
+            .eq("id", orderId);
+        if (updateError) console.error("Failed to update order status:", updateError);
+        console.error(`Order ${orderId} payment received but invoice creation failed — manual follow-up required`);
+        return;
+    }
 
     const { error: updateError } = await supabase
         .from("orders")

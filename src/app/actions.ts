@@ -63,7 +63,31 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
         data: { user },
     } = await supabase.auth.getUser();
 
-    const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+    // Server-side price validation: fetch products from DB to prevent price tampering
+    const productIds = cart.map((item) => item.id);
+    const { data: dbProducts, error: productsError } = await supabase
+        .from("products")
+        .select("id, name, price, stock")
+        .in("id", productIds);
+
+    if (productsError || !dbProducts) {
+        return { success: false, error: "Failed to validate products" };
+    }
+
+    const productMap = new Map(dbProducts.map((p) => [p.id, p]));
+
+    // Validate all cart items and compute subtotal in a single pass
+    let subtotal = 0;
+    for (const item of cart) {
+        const dbProduct = productMap.get(item.id);
+        if (!dbProduct) {
+            return { success: false, error: `Product "${item.name}" not found` };
+        }
+        if (dbProduct.stock < item.qty) {
+            return { success: false, error: `"${dbProduct.name}" only has ${dbProduct.stock} in stock` };
+        }
+        subtotal += dbProduct.price * item.qty;
+    }
     const { vatAmount, total } = calculateVAT(subtotal);
     const amountInPence = Math.round(total * 100);
 
@@ -89,13 +113,16 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
         return { success: false, error: "Failed to create order" };
     }
 
-    const orderItems = cart.map((item) => ({
-        order_id: order.id,
-        product_id: item.id,
-        product_name: item.name,
-        quantity: item.qty,
-        unit_price: item.price,
-    }));
+    const orderItems = cart.map((item) => {
+        const dbProduct = productMap.get(item.id)!;
+        return {
+            order_id: order.id,
+            product_id: item.id,
+            product_name: dbProduct.name,
+            quantity: item.qty,
+            unit_price: dbProduct.price,
+        };
+    });
 
     const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
     if (itemsError) {
@@ -154,15 +181,30 @@ export async function updateOrderShipping(
     }
 ) {
     const supabase = await createClient();
-    const { error } = await supabase
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    // Build authorization query: must be the order owner or guest
+    let query = supabase
         .from("orders")
         .update({
             shipping_address: shipping,
             billing_address: shipping,
         })
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .eq("status", "pending");
+
+    if (user) {
+        query = query.eq("user_id", user.id);
+    } else {
+        query = query.is("user_id", null);
+    }
+
+    const { error, count } = await query.select("id", { count: "exact" });
 
     if (error) return { success: false, error: error.message };
+    if (count === 0) return { success: false, error: "Order not found or not authorized" };
     return { success: true };
 }
 
@@ -184,13 +226,14 @@ export async function getOrderByToken(token: string) {
 // =============================================
 // LINK GUEST ORDERS TO ACCOUNT
 // =============================================
-export async function linkGuestOrdersToAccount(email: string) {
+export async function linkGuestOrdersToAccount(_email: string) {
     const supabase = await createClient();
     const {
         data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) return { success: false, error: "Must be logged in" };
+    if (!user.email) return { success: false, error: "Account email unavailable" };
 
     const { error } = await supabase
         .from("orders")
@@ -199,7 +242,7 @@ export async function linkGuestOrdersToAccount(email: string) {
             guest_email: null,
             guest_token: null,
         })
-        .eq("guest_email", email)
+        .eq("guest_email", user.email)
         .is("user_id", null);
 
     if (error) return { success: false, error: error.message };

@@ -10,7 +10,6 @@ export default function CheckoutSuccessPage() {
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
     const orderId = searchParams.get("order_id");
-    const paymentIntent = searchParams.get("payment_intent");
     const redirectStatus = searchParams.get("redirect_status");
     const { clearCart } = useCart();
     const [cleared, setCleared] = useState(false);

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import HeroSection from "@/components/home/HeroSection";
 import HomeFeatures from "@/components/home/HomeFeatures";
 import ProductCard from "@/components/product/ProductCard";
+import { toProduct } from "@/types";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
@@ -40,18 +41,7 @@ export default async function HomePage() {
                     {bestsellers?.map((product) => (
                         <ProductCard
                             key={product.id}
-                            product={{
-                                id: product.id,
-                                name: product.name,
-                                category: product.category,
-                                price: Number(product.price),
-                                imgUrl: product.image_url || "https://placehold.co/400",
-                                unit: product.unit,
-                                weight_kg: 0,
-                                rating: product.rating || 0,
-                                bestseller: product.bestseller || false,
-                                clubPrice: product.club_price ? Number(product.club_price) : null,
-                            }}
+                            product={toProduct(product)}
                         />
                     ))}
                 </div>

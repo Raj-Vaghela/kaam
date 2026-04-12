@@ -1,6 +1,6 @@
 "use client";
 
-import { loadStripe, Stripe } from "@stripe/stripe-js";
+import { loadStripe, type Stripe, type Appearance } from "@stripe/stripe-js";
 
 let stripePromise: Promise<Stripe | null> | null = null;
 
@@ -12,7 +12,7 @@ export function getStripe(): Promise<Stripe | null> {
 }
 
 // Branded Stripe Elements appearance — matches GajjuExpress design tokens.
-export const stripeAppearance = {
+export const stripeAppearance: Appearance = {
     theme: "stripe" as const,
     variables: {
         colorPrimary: "#c66b3d",

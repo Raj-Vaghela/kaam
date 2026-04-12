@@ -3,11 +3,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, FileText } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
 import { BRAND } from "@/lib/brand";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const router = useRouter();
     const isActive = (path: string) => pathname === path;
 
     const links = [
@@ -50,7 +52,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </nav>
 
                 <div className="p-3 border-t border-white/10">
-                    <button className="flex items-center gap-3 px-4 py-3 text-cream/60 hover:text-rose transition-colors w-full rounded-2xl">
+                    <button
+                        onClick={async () => {
+                            const supabase = createBrowserSupabase();
+                            await supabase.auth.signOut();
+                            router.push("/auth");
+                        }}
+                        className="flex items-center gap-3 px-4 py-3 text-cream/60 hover:text-rose transition-colors w-full rounded-2xl"
+                    >
                         <LogOut size={18} />
                         <span className="font-medium text-sm">Sign Out</span>
                     </button>

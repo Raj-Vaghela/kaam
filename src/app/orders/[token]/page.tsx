@@ -2,9 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Package, MapPin, Receipt, ArrowLeft, CheckCircle, Clock, Truck, XCircle } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 
 interface Props {
-    params: { token: string };
+    params: Promise<{ token: string }>;
 }
 
 const statusConfig: Record<string, { icon: any; tone: string; label: string }> = {
@@ -17,7 +18,7 @@ const statusConfig: Record<string, { icon: any; tone: string; label: string }> =
 };
 
 export default async function OrderTrackingPage({ params }: Props) {
-    const { token } = params;
+    const { token } = await params;
     const supabase = await createClient();
 
     const { data: order, error } = await supabase
@@ -34,7 +35,7 @@ export default async function OrderTrackingPage({ params }: Props) {
     return (
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <Link href="/" className="inline-flex items-center gap-2 text-ink-mute hover:text-accent text-sm font-medium mb-8">
-                <ArrowLeft size={16} /> Back to {`{shop}`.replace("{shop}", "GajjuExpress")}
+                <ArrowLeft size={16} /> Back to {BRAND.name}
             </Link>
 
             <div className="mb-8">
@@ -59,12 +60,16 @@ export default async function OrderTrackingPage({ params }: Props) {
                         <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-mute mb-3">
                             <MapPin size={14} className="text-accent" /> Delivery address
                         </h2>
-                        <address className="not-italic text-ink leading-relaxed">
-                            <strong>{order.shipping_address?.fullName}</strong><br />
-                            {order.shipping_address?.addressLine1}<br />
-                            {order.shipping_address?.addressLine2 && <>{order.shipping_address.addressLine2}<br /></>}
-                            {order.shipping_address?.city}, {order.shipping_address?.postcode}
-                        </address>
+                        {order.shipping_address ? (
+                            <address className="not-italic text-ink leading-relaxed">
+                                <strong>{order.shipping_address.fullName}</strong><br />
+                                {order.shipping_address.addressLine1}<br />
+                                {order.shipping_address.addressLine2 && <>{order.shipping_address.addressLine2}<br /></>}
+                                {order.shipping_address.city}, {order.shipping_address.postcode}
+                            </address>
+                        ) : (
+                            <p className="text-ink-mute text-sm">No address provided yet.</p>
+                        )}
                     </div>
 
                     <div>

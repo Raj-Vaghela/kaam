@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
 import Link from "next/link";
 import { ArrowLeft, Mail, Lock, Loader2, UserPlus } from "lucide-react";
 import { linkGuestOrdersToAccount } from "@/app/actions";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
 
 export default function CreateAccountFromOrderPage() {
     const params = useParams();
@@ -21,11 +23,6 @@ export default function CreateAccountFromOrderPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
-    const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
     useEffect(() => {
         async function fetchOrder() {
             const { data, error } = await supabase
@@ -38,7 +35,7 @@ export default function CreateAccountFromOrderPage() {
             setLoading(false);
         }
         fetchOrder();
-    }, [token, supabase]);
+    }, [token]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

@@ -25,10 +25,13 @@ export default async function AdminProductsPage() {
                 <div className="p-5 border-b border-cream-deep">
                     <div className="relative max-w-md">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-mute" size={18} />
+                        {/* TODO: wire up product search */}
                         <input
                             type="text"
                             placeholder="Search products…"
-                            className="w-full pl-11 pr-4 py-3 bg-cream border border-cream-deep rounded-full focus:outline-none focus:border-accent text-sm"
+                            disabled
+                            aria-disabled="true"
+                            className="w-full pl-11 pr-4 py-3 bg-cream border border-cream-deep rounded-full focus:outline-none focus:border-accent text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                     </div>
                 </div>
@@ -57,7 +60,7 @@ export default async function AdminProductsPage() {
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-ink-soft">{product.category}</td>
-                                <td className="px-6 py-4 font-semibold text-ink">£{product.price.toFixed(2)}</td>
+                                <td className="px-6 py-4 font-semibold text-ink">£{(Number(product.price) || 0).toFixed(2)}</td>
                                 <td className="px-6 py-4">
                                     <span className={`inline-flex py-1 px-3 rounded-full text-xs font-semibold ${product.stock > 0 ? "bg-leaf-soft text-leaf" : "bg-rose/10 text-rose"}`}>
                                         {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
@@ -65,10 +68,12 @@ export default async function AdminProductsPage() {
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <div className="flex justify-end gap-2">
-                                        <button className="p-2 text-ink-mute hover:text-accent hover:bg-accent-soft rounded-xl transition-colors">
+                                        {/* TODO: wire up edit product handler */}
+                                        <button disabled className="p-2 text-ink-mute hover:text-accent hover:bg-accent-soft rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed" aria-disabled="true">
                                             <Edit size={16} />
                                         </button>
-                                        <button className="p-2 text-ink-mute hover:text-rose hover:bg-rose/10 rounded-xl transition-colors">
+                                        {/* TODO: wire up delete product handler */}
+                                        <button disabled className="p-2 text-ink-mute hover:text-rose hover:bg-rose/10 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed" aria-disabled="true">
                                             <Trash2 size={16} />
                                         </button>
                                     </div>

@@ -1,5 +1,4 @@
 import { Resend } from "resend";
-import { storeConfig } from "./invoice";
 import { BRAND } from "./brand";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -36,9 +35,9 @@ function emailShell(inner: string) {
         ${inner}
         <hr style="border: none; border-top: 1px solid #ebe3d2; margin: 36px 0 24px;">
         <div style="text-align: center; color: ${INK_MUTE}; font-size: 12px;">
-            <p style="margin: 0 0 6px;">${storeConfig.name}</p>
-            <p style="margin: 0 0 4px;">${storeConfig.address.line1}, ${storeConfig.address.city}, ${storeConfig.address.postcode}</p>
-            <p style="margin: 0;">${storeConfig.email} · ${storeConfig.phone}</p>
+            <p style="margin: 0 0 6px;">${BRAND.legalName}</p>
+            <p style="margin: 0 0 4px;">${BRAND.address.line1}, ${BRAND.address.city}, ${BRAND.address.postcode}</p>
+            <p style="margin: 0;">${BRAND.contact.email} · ${BRAND.contact.phone}</p>
         </div>
     </div>
 </body>

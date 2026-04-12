@@ -143,7 +143,9 @@ export default function CheckoutForm({ orderId, guestToken, email, amount }: Pro
             </button>
 
             <p className="text-center text-xs text-ink-mute">
-                By placing your order, you agree to our Terms and Privacy Policy.
+                By placing your order, you agree to our{" "}
+                <a href="/terms" className="underline hover:text-accent">Terms</a> and{" "}
+                <a href="/privacy" className="underline hover:text-accent">Privacy Policy</a>.
             </p>
         </form>
     );

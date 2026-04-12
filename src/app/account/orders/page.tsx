@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { User, Package, LogOut, ArrowLeft } from "lucide-react";
+import { getStatusConfig, type OrderItem } from "@/lib/order-status";
 
 export default async function OrdersPage() {
     const supabase = await createClient();
@@ -61,18 +62,13 @@ export default async function OrdersPage() {
                                         <p className="text-[10px] uppercase tracking-wider text-ink-mute">Total</p>
                                         <p className="font-display text-xl text-accent">£{Number(order.total).toFixed(2)}</p>
                                     </div>
-                                    <span className={`text-xs px-3 py-1.5 rounded-full font-semibold uppercase tracking-wider ${
-                                        order.status === "paid" ? "bg-leaf-soft text-leaf" :
-                                        order.status === "pending" ? "bg-haldi-soft text-haldi" :
-                                        order.status === "cancelled" ? "bg-red-100 text-rose" :
-                                        "bg-cream-deep text-ink-mute"
-                                    }`}>
-                                        {order.status}
+                                    <span className={`text-xs px-3 py-1.5 rounded-full font-semibold uppercase tracking-wider ${getStatusConfig(order.status).bg} ${getStatusConfig(order.status).text}`}>
+                                        {getStatusConfig(order.status).label}
                                     </span>
                                 </div>
 
                                 <div className="p-6 space-y-3">
-                                    {order.order_items?.map((item: any) => (
+                                    {order.order_items?.map((item: OrderItem) => (
                                         <div key={item.id} className="flex items-center justify-between text-sm">
                                             <div>
                                                 <p className="font-medium text-ink">{item.product_name}</p>

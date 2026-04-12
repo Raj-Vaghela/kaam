@@ -5,7 +5,10 @@ import { ArrowLeft, Upload, X, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addProduct } from "@/app/actions";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export default function AddProductPage() {
     const [loading, setLoading] = useState(false);
@@ -16,12 +19,17 @@ export default function AddProductPage() {
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            alert("Only PNG, JPEG, and WebP images are allowed.");
+            return;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            alert("File size must be under 10MB.");
+            return;
+        }
         setUploading(true);
         try {
-            const supabase = createBrowserClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-            );
+            const supabase = createClient();
             const fileExt = file.name.split(".").pop();
             const fileName = `${Math.random()}.${fileExt}`;
             const { error: uploadError } = await supabase.storage.from("products").upload(fileName, file);
@@ -38,15 +46,20 @@ export default function AddProductPage() {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoading(true);
-        const formData = new FormData(e.currentTarget);
-        if (imageUrl) formData.set("image_url", imageUrl);
-        const result = await addProduct(formData);
-        if (!result.success) {
-            alert("Error creating product: " + result.message);
+        try {
+            const formData = new FormData(e.currentTarget);
+            if (imageUrl) formData.set("image_url", imageUrl);
+            const result = await addProduct(formData);
+            if (!result.success) {
+                alert("Error creating product: " + result.message);
+            } else {
+                router.push("/admin/products");
+                router.refresh();
+            }
+        } catch (err: any) {
+            alert("Error creating product: " + err.message);
+        } finally {
             setLoading(false);
-        } else {
-            router.push("/admin/products");
-            router.refresh();
         }
     };
 
@@ -64,14 +77,14 @@ export default function AddProductPage() {
 
             <form onSubmit={handleSubmit} className="bg-cream-soft border border-cream-deep rounded-3xl p-8 space-y-6">
                 <div>
-                    <label className={labelCls}>Product Name</label>
-                    <input name="name" required type="text" className={inputCls} placeholder="e.g., Royal Basmati Rice" />
+                    <label htmlFor="product-name" className={labelCls}>Product Name</label>
+                    <input id="product-name" name="name" required type="text" className={inputCls} placeholder="e.g., Royal Basmati Rice" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-5">
                     <div>
-                        <label className={labelCls}>Category</label>
-                        <select name="category" className={inputCls}>
+                        <label htmlFor="product-category" className={labelCls}>Category</label>
+                        <select id="product-category" name="category" className={inputCls}>
                             <option>Grains & Rice</option>
                             <option>Spices</option>
                             <option>Snacks</option>
@@ -82,8 +95,8 @@ export default function AddProductPage() {
                         </select>
                     </div>
                     <div>
-                        <label className={labelCls}>Price (£)</label>
-                        <input name="price" required type="number" step="0.01" className={inputCls} placeholder="0.00" />
+                        <label htmlFor="product-price" className={labelCls}>Price (£)</label>
+                        <input id="product-price" name="price" required type="number" step="0.01" className={inputCls} placeholder="0.00" />
                     </div>
                 </div>
 
@@ -93,7 +106,7 @@ export default function AddProductPage() {
                         <div className="border-2 border-dashed border-cream-deep rounded-2xl p-10 text-center hover:bg-cream/60 transition-colors relative">
                             <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/png,image/jpeg,image/webp"
                                 onChange={handleImageUpload}
                                 disabled={uploading}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
@@ -134,12 +147,12 @@ export default function AddProductPage() {
 
                 <div className="grid grid-cols-2 gap-5">
                     <div>
-                        <label className={labelCls}>Unit</label>
-                        <input name="unit" type="text" className={inputCls} placeholder="e.g., 5kg" />
+                        <label htmlFor="product-unit" className={labelCls}>Unit</label>
+                        <input id="product-unit" name="unit" type="text" className={inputCls} placeholder="e.g., 5kg" />
                     </div>
                     <div>
-                        <label className={labelCls}>Stock count</label>
-                        <input name="stock" type="number" className={inputCls} placeholder="100" />
+                        <label htmlFor="product-stock" className={labelCls}>Stock count</label>
+                        <input id="product-stock" name="stock" type="number" className={inputCls} placeholder="100" />
                     </div>
                 </div>
 

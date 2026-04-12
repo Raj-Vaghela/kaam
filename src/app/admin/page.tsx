@@ -1,6 +1,12 @@
 import { TrendingUp, Package, ShoppingBag } from "lucide-react";
 
 export default function AdminDashboard() {
+    const toneClass: Record<string, string> = {
+        leaf: "text-leaf",
+        haldi: "text-haldi",
+        "ink-mute": "text-ink-mute",
+    };
+
     const stats = [
         { label: "Total Sales", value: "£12,345.00", note: "+12.5% from last month", tone: "leaf" },
         { label: "Active Orders", value: "24", note: "8 pending shipment", tone: "haldi" },
@@ -20,7 +26,7 @@ export default function AdminDashboard() {
                         <h3 className="text-ink-mute text-xs font-semibold uppercase tracking-wider mb-3">{s.label}</h3>
                         <p className="font-display text-4xl text-ink mb-2">{s.value}</p>
                         <span className="text-xs text-ink-mute flex items-center gap-1">
-                            <TrendingUp size={12} className="text-leaf" /> {s.note}
+                            <TrendingUp size={12} className={toneClass[s.tone] || "text-ink-mute"} /> {s.note}
                         </span>
                     </div>
                 ))}

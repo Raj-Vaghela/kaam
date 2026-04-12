@@ -10,6 +10,7 @@ const INK: [number, number, number] = [26, 23, 20];
 const INK_SOFT: [number, number, number] = [74, 66, 59];
 const INK_MUTE: [number, number, number] = [138, 129, 120];
 const CREAM_DEEP: [number, number, number] = [235, 227, 210];
+const CREAM_SOFT: [number, number, number] = [250, 246, 236];
 
 export function generateInvoicePDF(data: InvoiceData): Buffer {
     const doc = new jsPDF();
@@ -114,7 +115,7 @@ export function generateInvoicePDF(data: InvoiceData): Buffer {
             fontSize: 9,
             cellPadding: 5,
         },
-        alternateRowStyles: { fillColor: [250, 246, 236] },
+        alternateRowStyles: { fillColor: CREAM_SOFT },
         styles: {
             fontSize: 9,
             cellPadding: 4.5,

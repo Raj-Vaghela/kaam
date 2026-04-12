@@ -13,7 +13,7 @@ import Link from "next/link";
 import { Elements } from "@stripe/react-stripe-js";
 import { getStripe, stripeAppearance } from "@/lib/stripe-client";
 import CheckoutForm from "@/components/checkout/CheckoutForm";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import { calculateVAT } from "@/lib/invoice";
 
 const stripePromise = getStripe();
@@ -31,10 +31,7 @@ export default function CheckoutPage() {
 
     // Detect logged-in user email
     useEffect(() => {
-        const supabase = createBrowserClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
+        const supabase = createClient();
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (user?.email) {
                 setEmail(user.email);
@@ -46,6 +43,10 @@ export default function CheckoutPage() {
     const startCheckout = async () => {
         if (!email) {
             setError("Please enter your email to continue.");
+            return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            setError("Please enter a valid email address.");
             return;
         }
         setInitializing(true);
