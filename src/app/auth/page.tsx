@@ -227,7 +227,9 @@ export default function AuthPage() {
                     </form>
 
                     <p className="mt-8 text-center text-xs text-ink-mute">
-                        By continuing, you agree to our Terms and Privacy Policy.
+                        By continuing, you agree to our{" "}
+                        <a href="/terms" className="underline hover:text-accent">Terms</a> and{" "}
+                        <a href="/privacy" className="underline hover:text-accent">Privacy Policy</a>.
                     </p>
                 </div>
             </div>

@@ -62,7 +62,9 @@ export default function CheckoutPage() {
         setGuestToken(result.guestToken || null);
     };
 
-    const { vatAmount, total: totalWithVat } = calculateVAT(cartTotal);
+    const freeDeliveryThreshold = 40;
+    const deliveryFee = cartTotal >= freeDeliveryThreshold ? 0 : 3.99;
+    const { vatAmount, total: totalWithVat } = calculateVAT(cartTotal + deliveryFee);
 
     if (cart.length === 0) {
         return (
@@ -190,7 +192,11 @@ export default function CheckoutPage() {
                             </div>
                             <div className="flex justify-between text-ink-soft">
                                 <span>Delivery</span>
-                                <span className="text-leaf font-semibold">FREE</span>
+                                {deliveryFee === 0 ? (
+                                    <span className="text-leaf font-semibold">FREE</span>
+                                ) : (
+                                    <span>£{deliveryFee.toFixed(2)}</span>
+                                )}
                             </div>
                             <div className="flex justify-between font-display text-2xl text-ink pt-3 border-t border-cream-deep">
                                 <span>Total</span>

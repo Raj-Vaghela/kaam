@@ -54,7 +54,7 @@ export default function CheckoutForm({ orderId, guestToken, email, amount }: Pro
                 city: addr.city || "",
                 postcode: addr.postal_code || "",
                 country: addr.country || "",
-            });
+            }, guestToken);
             if (!result.success) {
                 setError(result.error || "Could not save address");
                 setSubmitting(false);

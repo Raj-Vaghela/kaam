@@ -125,6 +125,8 @@ export default function Footer() {
                         <div className="flex gap-3 mt-5">
                             <a
                                 href={BRAND.social.instagram}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 aria-label="Instagram"
                                 className="w-9 h-9 rounded-full bg-white/10 hover:bg-haldi hover:text-[var(--gajju-teal-deep)] flex items-center justify-center transition-colors"
                             >
@@ -132,6 +134,8 @@ export default function Footer() {
                             </a>
                             <a
                                 href={BRAND.social.facebook}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 aria-label="Facebook"
                                 className="w-9 h-9 rounded-full bg-white/10 hover:bg-haldi hover:text-[var(--gajju-teal-deep)] flex items-center justify-center transition-colors"
                             >

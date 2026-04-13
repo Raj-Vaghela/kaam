@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { BRAND } from "./brand";
 
 // Store configuration for invoices — sourced from BRAND.
@@ -18,20 +19,22 @@ export const storeConfig = {
 };
 
 // Invoice number generation (format: GJX-YYYYMM-XXXXX)
+function cryptoRandomDigits(length: number): string {
+    return crypto.randomInt(0, 10 ** length).toString().padStart(length, "0");
+}
+
 export function generateInvoiceNumber(): string {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
-    const random = Math.floor(Math.random() * 99999).toString().padStart(5, "0");
-    return `GJX-${year}${month}-${random}`;
+    return `GJX-${year}${month}-${cryptoRandomDigits(5)}`;
 }
 
 export function generateCreditNoteNumber(): string {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
-    const random = Math.floor(Math.random() * 99999).toString().padStart(5, "0");
-    return `CN-${year}${month}-${random}`;
+    return `CN-${year}${month}-${cryptoRandomDigits(5)}`;
 }
 
 export interface InvoiceItem {

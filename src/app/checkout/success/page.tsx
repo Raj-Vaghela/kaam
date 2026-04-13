@@ -14,12 +14,31 @@ export default function CheckoutSuccessPage() {
     const { clearCart } = useCart();
     const [cleared, setCleared] = useState(false);
 
+    const isSuccess = redirectStatus === "succeeded";
+
     useEffect(() => {
-        if (!cleared && redirectStatus === "succeeded") {
+        if (!cleared && isSuccess && orderId) {
             clearCart();
             setCleared(true);
         }
-    }, [cleared, clearCart, redirectStatus]);
+    }, [cleared, clearCart, isSuccess, orderId]);
+
+    if (!isSuccess) {
+        return (
+            <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+                <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-7">
+                    <CheckCircle size={52} className="text-rose" strokeWidth={1.6} />
+                </div>
+                <h1 className="font-display text-4xl text-ink mb-3">Payment not completed</h1>
+                <p className="text-lg text-ink-mute mb-8">
+                    Your payment was not successful. Please try again.
+                </p>
+                <Link href="/checkout" className="btn-primary inline-block px-8 py-3.5">
+                    Return to checkout
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-20">
@@ -52,7 +71,7 @@ export default function CheckoutSuccessPage() {
                 </div>
                 {token && (
                     <Link
-                        href={`/orders/${token}`}
+                        href={`/orders/${encodeURIComponent(token)}`}
                         className="inline-flex items-center gap-2 text-accent font-semibold text-sm hover:gap-3 transition-all"
                     >
                         <Package size={16} />
@@ -88,7 +107,7 @@ export default function CheckoutSuccessPage() {
                         </div>
                     </div>
                     <Link
-                        href={`/orders/${token}/create-account`}
+                        href={`/orders/${encodeURIComponent(token!)}/create-account`}
                         className="inline-flex items-center gap-2 bg-accent hover:bg-[var(--gajju-terracotta-deep)] text-white px-6 py-3 rounded-full font-semibold text-sm transition-colors"
                     >
                         Create my account <ArrowRight size={14} />

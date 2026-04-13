@@ -125,7 +125,7 @@ export default function AddProductPage() {
                                         <div className="text-sm">
                                             <span className="font-semibold text-accent">Click to upload</span> or drag and drop
                                         </div>
-                                        <span className="text-xs">PNG, JPG up to 10MB</span>
+                                        <span className="text-xs">PNG, JPG, WebP up to 10MB</span>
                                     </>
                                 )}
                             </div>

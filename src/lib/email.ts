@@ -3,6 +3,10 @@ import { BRAND } from "./brand";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+function escapeHtml(str: string): string {
+    return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 // Brand colors used inline (email clients strip <style>)
 const TEAL = "#1f5f6b";
 const TEAL_DEEP = "#134048";
@@ -62,10 +66,10 @@ export async function sendOrderConfirmation(data: OrderEmailData) {
         </div>
 
         <div style="text-align: center; margin: 32px 0;">
-            <a href="${trackingUrl}" style="display: inline-block; background: ${TERRACOTTA}; color: white; padding: 16px 32px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px;">Track your order →</a>
+            <a href="${escapeHtml(trackingUrl)}" style="display: inline-block; background: ${TERRACOTTA}; color: white; padding: 16px 32px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px;">Track your order →</a>
         </div>
 
-        ${invoicePdfUrl ? `<p style="text-align: center; margin: 16px 0 0;"><a href="${invoicePdfUrl}" style="color: ${TEAL}; font-size: 14px;">Download invoice (PDF)</a></p>` : ""}
+        ${invoicePdfUrl ? `<p style="text-align: center; margin: 16px 0 0;"><a href="${escapeHtml(invoicePdfUrl)}" style="color: ${TEAL}; font-size: 14px;">Download invoice (PDF)</a></p>` : ""}
     `;
 
     try {
@@ -106,7 +110,7 @@ export async function sendAccountCreationInvite(data: AccountCreationEmailData) 
         </ul>
 
         <div style="text-align: center; margin: 36px 0;">
-            <a href="${createAccountUrl}" style="display: inline-block; background: ${TERRACOTTA}; color: white; padding: 16px 32px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px;">Create my account</a>
+            <a href="${escapeHtml(createAccountUrl)}" style="display: inline-block; background: ${TERRACOTTA}; color: white; padding: 16px 32px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15px;">Create my account</a>
         </div>
 
         <p style="color: ${INK_MUTE}; font-size: 13px; text-align: center;">Totally optional. Your order is confirmed regardless.</p>

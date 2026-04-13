@@ -212,10 +212,13 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
 async function handlePaymentIntentFailed(pi: Stripe.PaymentIntent) {
     const orderId = pi.metadata?.order_id;
     if (!orderId) return;
+    // payment_intent.payment_failed is not terminal — the customer can retry.
+    // Only mark as cancelled on the terminal payment_intent.canceled event.
     const { error } = await supabase
         .from("orders")
-        .update({ status: "cancelled" })
-        .eq("id", orderId);
+        .update({ status: "payment_failed" })
+        .eq("id", orderId)
+        .eq("status", "pending");
     if (error) console.error("Failed to update order status:", error);
-    console.log(`Order ${orderId} payment failed`);
+    console.log(`Order ${orderId} payment attempt failed (retryable)`);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Star, Plus, Check } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 
@@ -12,13 +12,21 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
     const { addToCart } = useCart();
     const [added, setAdded] = useState(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const finalPrice = product.clubPrice || product.price;
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, []);
+
+    const finalPrice = product.clubPrice ?? product.price;
 
     const handleAdd = () => {
         addToCart(product, 1);
         setAdded(true);
-        setTimeout(() => setAdded(false), 1400);
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => setAdded(false), 1400);
     };
 
     return (
@@ -36,7 +44,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                             Bestseller
                         </span>
                     )}
-                    {product.clubPrice && (
+                    {product.clubPrice != null && (
                         <span className="bg-accent text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
                             Save £{(product.price - finalPrice).toFixed(2)}
                         </span>
@@ -77,7 +85,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                     <span className="font-display text-2xl text-ink-soft">
                         £{finalPrice.toFixed(2)}
                     </span>
-                    {product.clubPrice && (
+                    {product.clubPrice != null && (
                         <span className="text-sm text-ink-mute line-through">
                             £{product.price.toFixed(2)}
                         </span>

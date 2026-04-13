@@ -35,7 +35,7 @@ export function toProduct(row: any): Product {
         price: Number(row.price),
         imgUrl: row.image_url || "https://placehold.co/400",
         unit: row.unit,
-        weight_kg: 0,
+        weight_kg: row.weight_kg ?? 0,
         rating: row.rating || 0,
         bestseller: row.bestseller || false,
         clubPrice: row.club_price != null ? Number(row.club_price) : null,

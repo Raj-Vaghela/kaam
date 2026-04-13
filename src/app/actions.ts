@@ -67,7 +67,7 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
     const productIds = cart.map((item) => item.id);
     const { data: dbProducts, error: productsError } = await supabase
         .from("products")
-        .select("id, name, price, stock")
+        .select("id, name, price, club_price, stock")
         .in("id", productIds);
 
     if (productsError || !dbProducts) {
@@ -78,6 +78,7 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
 
     // Validate all cart items and compute subtotal in a single pass
     let subtotal = 0;
+    const validatedItems: { dbProduct: typeof dbProducts[0]; qty: number; unitPrice: number }[] = [];
     for (const item of cart) {
         const dbProduct = productMap.get(item.id);
         if (!dbProduct) {
@@ -86,9 +87,13 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
         if (dbProduct.stock < item.qty) {
             return { success: false, error: `"${dbProduct.name}" only has ${dbProduct.stock} in stock` };
         }
-        subtotal += dbProduct.price * item.qty;
+        const unitPrice = dbProduct.club_price ?? dbProduct.price;
+        subtotal += unitPrice * item.qty;
+        validatedItems.push({ dbProduct, qty: item.qty, unitPrice });
     }
-    const { vatAmount, total } = calculateVAT(subtotal);
+    const freeDeliveryThreshold = 40;
+    const deliveryFee = subtotal >= freeDeliveryThreshold ? 0 : 3.99;
+    const { vatAmount, total } = calculateVAT(subtotal + deliveryFee);
     const amountInPence = Math.round(total * 100);
 
     const guestToken = user ? null : crypto.randomUUID();
@@ -113,16 +118,13 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
         return { success: false, error: "Failed to create order" };
     }
 
-    const orderItems = cart.map((item) => {
-        const dbProduct = productMap.get(item.id)!;
-        return {
-            order_id: order.id,
-            product_id: item.id,
-            product_name: dbProduct.name,
-            quantity: item.qty,
-            unit_price: dbProduct.price,
-        };
-    });
+    const orderItems = validatedItems.map(({ dbProduct, qty, unitPrice }) => ({
+        order_id: order.id,
+        product_id: dbProduct.id,
+        product_name: dbProduct.name,
+        quantity: qty,
+        unit_price: unitPrice,
+    }));
 
     const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
     if (itemsError) {
@@ -178,14 +180,15 @@ export async function updateOrderShipping(
         city: string;
         postcode: string;
         country?: string;
-    }
+    },
+    guestToken?: string | null
 ) {
     const supabase = await createClient();
     const {
         data: { user },
     } = await supabase.auth.getUser();
 
-    // Build authorization query: must be the order owner or guest
+    // Build authorization query: must be the order owner or verified guest
     let query = supabase
         .from("orders")
         .update({
@@ -197,8 +200,10 @@ export async function updateOrderShipping(
 
     if (user) {
         query = query.eq("user_id", user.id);
+    } else if (guestToken) {
+        query = query.eq("guest_token", guestToken);
     } else {
-        query = query.is("user_id", null);
+        return { success: false, error: "Authentication required" };
     }
 
     const { error, count } = await query.select("id", { count: "exact" });
