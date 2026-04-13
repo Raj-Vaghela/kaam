@@ -90,11 +90,11 @@ export default function AuthPage() {
 
                 <div className="my-auto max-w-lg">
                     <Image
-                        src={BRAND.logo.horizontal}
+                        src={BRAND.logo.horizontalWhite}
                         alt={BRAND.name}
                         width={220}
                         height={56}
-                        className="brightness-0 invert mb-12"
+                        className="mb-12"
                     />
                     <h1 className="font-display text-6xl leading-[0.95] mb-6">
                         Welcome to the family.

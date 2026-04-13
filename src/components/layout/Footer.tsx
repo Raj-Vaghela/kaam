@@ -28,11 +28,11 @@ export default function Footer() {
                 <div className="grid lg:grid-cols-2 gap-12 mb-16 pb-16 border-b border-white/10">
                     <div>
                         <Image
-                            src={BRAND.logo.horizontal}
+                            src={BRAND.logo.horizontalWhite}
                             alt={BRAND.name}
                             width={200}
                             height={52}
-                            className="object-contain mb-5 brightness-0 invert opacity-95"
+                            className="object-contain mb-5 opacity-95"
                         />
                         <p className="font-display text-2xl text-cream leading-tight mb-2">
                             {BRAND.taglineEn}

@@ -31,5 +31,7 @@ export const BRAND = {
     logo: {
         horizontal: "/gajjuexpress-logo-h.png",
         stacked: "/gajjuexpress-logo-v.png",
+        horizontalWhite: "/gajjuexpress-logo-h-white.png",
+        stackedWhite: "/gajjuexpress-logo-v-white.png",
     },
 } as const;

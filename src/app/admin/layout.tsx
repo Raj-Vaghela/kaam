@@ -25,11 +25,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <aside className="w-64 bg-[var(--gajju-teal-deep)] text-cream flex flex-col fixed inset-y-0 left-0 z-50">
                 <div className="p-6 border-b border-white/10">
                     <Image
-                        src={BRAND.logo.horizontal}
+                        src={BRAND.logo.horizontalWhite}
                         alt={BRAND.name}
                         width={170}
                         height={44}
-                        className="brightness-0 invert"
                     />
                     <p className="text-[10px] uppercase tracking-widest text-haldi mt-2">Admin Console</p>
                 </div>
