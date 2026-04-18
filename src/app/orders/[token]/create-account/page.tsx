@@ -14,6 +14,7 @@ export default function CreateAccountFromOrderPage() {
     const router = useRouter();
     const token = params.token as string;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [order, setOrder] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -51,8 +52,8 @@ export default function CreateAccountFromOrderPage() {
             if (authData.user) await linkGuestOrdersToAccount(email);
             setSuccess(true);
             setTimeout(() => router.push("/account"), 2000);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Something went wrong");
         } finally {
             setSubmitting(false);
         }
@@ -72,7 +73,7 @@ export default function CreateAccountFromOrderPage() {
                 <div className="w-20 h-20 bg-leaf-soft rounded-full flex items-center justify-center mx-auto mb-6">
                     <UserPlus size={36} className="text-leaf" />
                 </div>
-                <h1 className="font-display text-4xl text-ink mb-3">You're in!</h1>
+                <h1 className="font-display text-4xl text-ink mb-3">You&apos;re in!</h1>
                 <p className="text-ink-mute mb-2">Check your inbox to confirm your account.</p>
                 <p className="text-sm text-ink-mute">Past orders linked. Redirecting…</p>
             </div>

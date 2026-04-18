@@ -26,8 +26,26 @@ export interface Category {
     image: string;
 }
 
-// Maps a raw Supabase product row to the frontend Product shape.
-export function toProduct(row: any): Product {
+/**
+ * Raw column shape returned by Supabase for the `products` table.
+ * Keep in sync with the DB schema — or replace with `supabase gen types`.
+ * Price and club_price are returned as strings by PostgREST for numeric columns.
+ */
+interface DbProductRow {
+    id: string;
+    name: string;
+    category: string;
+    price: string | number;
+    image_url: string | null;
+    unit: string;
+    weight_kg: number | null;
+    rating: number | null;
+    bestseller: boolean | null;
+    club_price: string | number | null;
+}
+
+/** Maps a raw Supabase product row to the typed frontend Product shape. */
+export function toProduct(row: DbProductRow): Product {
     return {
         id: row.id,
         name: row.name,

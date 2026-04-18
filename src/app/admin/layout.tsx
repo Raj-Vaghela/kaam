@@ -1,23 +1,20 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, FileText } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
-import { createClient as createBrowserSupabase } from "@/lib/supabase/client";
+import { LayoutDashboard, Package, FileText, Shield, Users } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { requireAdmin } from "@/lib/auth/admin";
+import AdminSignOutButton from "./AdminSignOutButton";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-    const pathname = usePathname();
-    const router = useRouter();
-    const isActive = (path: string) => pathname === path;
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+    // Server-side role gate — redirects non-admins silently
+    await requireAdmin();
 
     const links = [
         { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
         { href: "/admin/products", icon: Package, label: "Products" },
-        { href: "/admin/orders", icon: ShoppingBag, label: "Orders" },
         { href: "/admin/invoices", icon: FileText, label: "Invoices" },
-        { href: "/admin/settings", icon: Settings, label: "Settings" },
+        { href: "/admin/users", icon: Users, label: "Users" },
+        { href: "/admin/audit-log", icon: Shield, label: "Audit Log" },
     ];
 
     return (
@@ -38,11 +35,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <Link
                             key={href}
                             href={href}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-                                isActive(href)
-                                    ? "bg-accent text-white shadow-[var(--shadow-bloom)]"
-                                    : "text-cream/70 hover:bg-white/5 hover:text-cream"
-                            }`}
+                            className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-cream/70 hover:bg-white/5 hover:text-cream"
                         >
                             <Icon size={18} />
                             <span className="font-medium text-sm">{label}</span>
@@ -51,17 +44,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </nav>
 
                 <div className="p-3 border-t border-white/10">
-                    <button
-                        onClick={async () => {
-                            const supabase = createBrowserSupabase();
-                            await supabase.auth.signOut();
-                            router.push("/auth");
-                        }}
-                        className="flex items-center gap-3 px-4 py-3 text-cream/60 hover:text-rose transition-colors w-full rounded-2xl"
-                    >
-                        <LogOut size={18} />
-                        <span className="font-medium text-sm">Sign Out</span>
-                    </button>
+                    <AdminSignOutButton />
                 </div>
             </aside>
 

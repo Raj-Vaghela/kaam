@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle, Package, ArrowRight, UserPlus, Mail } from "lucide-react";
+import { CheckCircle, Package, ArrowRight, UserPlus, Mail, Loader2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 export default function CheckoutSuccessPage() {
+    return (
+        <Suspense fallback={<div className="max-w-2xl mx-auto px-4 py-20 text-center"><Loader2 className="animate-spin text-ink-mute mx-auto" size={32} /></div>}>
+            <CheckoutSuccessInner />
+        </Suspense>
+    );
+}
+
+function CheckoutSuccessInner() {
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
     const orderId = searchParams.get("order_id");
@@ -19,6 +27,7 @@ export default function CheckoutSuccessPage() {
     useEffect(() => {
         if (!cleared && isSuccess && orderId) {
             clearCart();
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setCleared(true);
         }
     }, [cleared, clearCart, isSuccess, orderId]);
@@ -65,7 +74,7 @@ export default function CheckoutSuccessPage() {
                     <div>
                         <h2 className="font-display text-xl text-ink mb-1">Email on its way</h2>
                         <p className="text-sm text-ink-mute">
-                            We've sent your invoice and tracking link to the email on file.
+                            We&apos;ve sent your invoice and tracking link to the email on file.
                         </p>
                     </div>
                 </div>

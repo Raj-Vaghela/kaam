@@ -2,18 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { generateInvoiceNumber, storeConfig, calculateVAT, InvoiceData } from "@/lib/invoice";
-import { sendOrderConfirmation, sendAccountCreationInvite } from "@/lib/email";
+import { sendOrderConfirmation } from "@/lib/email";
 import { generateInvoicePDF, getInvoiceFilename } from "@/lib/pdf";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-01-27.acacia",
-});
+// Lazy-init to avoid build-time crash when env vars are not yet set
+let _stripe: Stripe | null = null;
+function getStripe() {
+    if (!_stripe) {
+        _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+            apiVersion: "2026-01-28.clover",
+        });
+    }
+    return _stripe;
+}
 
-// Service role client (bypasses RLS) — webhook only.
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _supabase: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getSupabase(): any {
+    if (!_supabase) {
+        _supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+    }
+    return _supabase;
+}
 
 export async function POST(request: NextRequest) {
     const body = await request.text();
@@ -25,14 +39,15 @@ export async function POST(request: NextRequest) {
 
     let event: Stripe.Event;
     try {
-        event = stripe.webhooks.constructEvent(
+        event = getStripe().webhooks.constructEvent(
             body,
             signature,
             process.env.STRIPE_WEBHOOK_SECRET!
         );
-    } catch (err: any) {
-        console.error("Webhook signature verification failed:", err.message);
-        return NextResponse.json({ error: err.message }, { status: 400 });
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Signature verification failed";
+        console.error("Webhook signature verification failed:", message);
+        return NextResponse.json({ error: message }, { status: 400 });
     }
 
     switch (event.type) {
@@ -48,7 +63,7 @@ export async function POST(request: NextRequest) {
         case "checkout.session.completed": {
             const session = event.data.object as Stripe.Checkout.Session;
             if (session.payment_intent) {
-                const pi = await stripe.paymentIntents.retrieve(
+                const pi = await getStripe().paymentIntents.retrieve(
                     session.payment_intent as string
                 );
                 await handlePaymentIntentSucceeded(pi);
@@ -63,6 +78,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
+    const supabase = getSupabase();
     const orderId = pi.metadata?.order_id;
     const guestToken = pi.metadata?.guest_token || null;
 
@@ -89,6 +105,7 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
     }
 
     const subtotal = order.order_items.reduce(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (sum: number, item: any) => sum + item.unit_price * item.quantity,
         0
     );
@@ -99,6 +116,7 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
     const customerName = order.shipping_address?.fullName || "Customer";
     const billingAddress = order.billing_address || order.shipping_address || {};
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const invoiceItems = order.order_items.map((item: any) => ({
         name: item.product_name,
         quantity: item.quantity,
@@ -137,13 +155,26 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
         if (uploadError) {
             console.error("Failed to upload PDF:", uploadError);
         } else {
-            const { data: urlData } = supabase.storage
-                .from("invoices")
-                .getPublicUrl(`${invoiceNumber}/${filename}`);
-            pdfUrl = urlData.publicUrl;
+            // Store the path, not a public URL — generate signed URLs at display time
+            pdfUrl = `${invoiceNumber}/${filename}`;
         }
     } catch (pdfError) {
         console.error("Failed to generate PDF:", pdfError);
+    }
+
+    // Idempotent insert — if an invoice already exists for this order, skip.
+    // Requires UNIQUE constraint on invoices.order_id in the database.
+    const { data: existingInvoice } = await supabase
+        .from("invoices")
+        .select("id")
+        .eq("order_id", orderId)
+        .maybeSingle();
+
+    if (existingInvoice) {
+        console.log(`Invoice already exists for order ${orderId}; skipping duplicate`);
+        // Ensure order is marked paid even if this is a retry
+        await supabase.from("orders").update({ status: "paid", invoice_id: existingInvoice.id }).eq("id", orderId);
+        return;
     }
 
     const { data: invoice, error: invoiceError } = await supabase
@@ -165,7 +196,7 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
         .single();
 
     if (invoiceError) {
-        console.error("Failed to create invoice:", invoiceError);
+        console.error("Failed to create invoice:", invoiceError?.message);
         // Don't mark as paid without a linked invoice
         const { error: updateError } = await supabase
             .from("orders")
@@ -188,28 +219,33 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
         : `${baseUrl}/account/orders`;
 
     if (customerEmail) {
+        // Generate a short-lived signed URL for the invoice PDF in the email
+        let signedPdfUrl: string | undefined;
+        if (pdfUrl) {
+            const { data: signedData } = await supabase.storage
+                .from("invoices")
+                .createSignedUrl(pdfUrl, 7 * 24 * 60 * 60); // 7 days
+            signedPdfUrl = signedData?.signedUrl;
+        }
+
         await sendOrderConfirmation({
             customerEmail,
             customerName,
             orderId: orderId.slice(0, 8).toUpperCase(),
             orderTotal: total,
             trackingUrl,
-            invoicePdfUrl: pdfUrl || undefined,
+            invoicePdfUrl: signedPdfUrl,
         });
 
-        if (guestToken && order.guest_email) {
-            await sendAccountCreationInvite({
-                customerEmail: order.guest_email,
-                customerName,
-                createAccountUrl: `${baseUrl}/orders/${guestToken}/create-account`,
-            });
-        }
+        // GDPR: Do NOT send unsolicited account creation emails.
+        // The order confirmation page has a create-account CTA instead.
     }
 
     console.log(`Order ${orderId} paid; invoice ${invoiceNumber} created${pdfUrl ? " (PDF)" : ""}`);
 }
 
 async function handlePaymentIntentFailed(pi: Stripe.PaymentIntent) {
+    const supabase = getSupabase();
     const orderId = pi.metadata?.order_id;
     if (!orderId) return;
     // payment_intent.payment_failed is not terminal — the customer can retry.

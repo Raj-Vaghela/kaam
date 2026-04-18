@@ -97,7 +97,7 @@ export default async function OrdersPage() {
                         <div className="bg-cream-soft border border-cream-deep rounded-3xl p-12 text-center">
                             <Package size={56} className="mx-auto text-cream-deep mb-5" strokeWidth={1.4} />
                             <h2 className="font-display text-2xl text-ink mb-2">No orders yet</h2>
-                            <p className="text-ink-mute mb-6">When you place an order, it'll show up here.</p>
+                            <p className="text-ink-mute mb-6">When you place an order, it&apos;ll show up here.</p>
                             <Link href="/products" className="btn-primary inline-block px-8 py-3.5">
                                 Start shopping
                             </Link>

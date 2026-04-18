@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { User, Package, MapPin, LogOut } from "lucide-react";
+import { User, Package, MapPin, LogOut, Download, Trash2 } from "lucide-react";
 
 export default async function AccountPage() {
     const supabase = await createClient();
@@ -112,6 +112,33 @@ export default async function AccountPage() {
                         ) : (
                             <p className="text-ink-mute">No orders yet.</p>
                         )}
+                    </div>
+
+                    {/* GDPR: Data Rights */}
+                    <div className="bg-cream-soft border border-cream-deep rounded-3xl p-8">
+                        <h2 className="font-display text-2xl text-ink mb-5">Your data</h2>
+                        <div className="space-y-3">
+                            <a
+                                href="/api/account/export"
+                                className="flex items-center gap-3 px-4 py-3 rounded-2xl text-ink-soft hover:bg-cream transition-colors"
+                            >
+                                <Download size={18} className="text-accent" />
+                                <div>
+                                    <p className="font-medium text-sm text-ink">Download my data</p>
+                                    <p className="text-xs text-ink-mute">Get a copy of everything we hold about you</p>
+                                </div>
+                            </a>
+                            <Link
+                                href="/account/delete"
+                                className="flex items-center gap-3 px-4 py-3 rounded-2xl text-ink-soft hover:bg-red-50 transition-colors"
+                            >
+                                <Trash2 size={18} className="text-rose" />
+                                <div>
+                                    <p className="font-medium text-sm text-rose">Delete my account</p>
+                                    <p className="text-xs text-ink-mute">Permanently remove your account and anonymise order history</p>
+                                </div>
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>

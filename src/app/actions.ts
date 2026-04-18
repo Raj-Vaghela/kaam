@@ -6,15 +6,35 @@ import Stripe from "stripe";
 import { CartItem } from "@/types";
 import { calculateVAT } from "@/lib/invoice";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-01-27.acacia",
-});
+// Lazy-init mirrors the webhook route — avoids build-time crash when env vars are absent in CI
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe {
+    if (!_stripe) {
+        _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+            apiVersion: "2026-01-28.clover",
+        });
+    }
+    return _stripe;
+}
 
 // =============================================
 // PRODUCT ACTIONS
 // =============================================
 export async function addProduct(formData: FormData) {
     const supabase = await createClient();
+
+    // Admin authorization check
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { success: false, message: "Unauthorized" };
+
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+    if (profile?.role !== "admin") return { success: false, message: "Unauthorized" };
 
     const name = formData.get("name") as string;
     const category = formData.get("category") as string;
@@ -36,6 +56,107 @@ export async function addProduct(formData: FormData) {
 
     if (error) return { success: false, message: error.message };
 
+    // Audit log (runs under caller's session via SECURITY DEFINER RPC)
+    const { logAdminAction } = await import("@/lib/audit");
+    await logAdminAction(supabase, {
+        action: "product:create",
+        resourceType: "product",
+        metadata: { productName: name },
+    });
+
+    revalidatePath("/", "layout");
+    revalidatePath("/admin/products");
+
+    return { success: true };
+}
+
+export async function updateProduct(productId: string, formData: FormData) {
+    const supabase = await createClient();
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { success: false, message: "Unauthorized" };
+
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+    if (profile?.role !== "admin") return { success: false, message: "Unauthorized" };
+
+    if (!productId) return { success: false, message: "Missing product id" };
+
+    const name = (formData.get("name") as string)?.trim();
+    const category = formData.get("category") as string;
+    const priceRaw = formData.get("price") as string;
+    const price = parseFloat(priceRaw);
+    const image_url = formData.get("image_url") as string;
+    const unit = formData.get("unit") as string;
+    const stock = parseInt(formData.get("stock") as string) || 0;
+    const bestseller = formData.get("bestseller") === "on";
+
+    if (!name || !category || isNaN(price) || price < 0) {
+        return { success: false, message: "Missing or invalid fields" };
+    }
+
+    const { error } = await supabase
+        .from("products")
+        .update({ name, category, price, image_url, unit, stock, bestseller })
+        .eq("id", productId);
+
+    if (error) return { success: false, message: error.message };
+
+    const { logAdminAction } = await import("@/lib/audit");
+    await logAdminAction(supabase, {
+        action: "product:update",
+        resourceType: "product",
+        resourceId: productId,
+        metadata: { productName: name },
+    });
+
+    revalidatePath("/", "layout");
+    revalidatePath("/admin/products");
+    revalidatePath(`/admin/products/${productId}/edit`);
+
+    return { success: true };
+}
+
+export async function deleteProduct(productId: string) {
+    const supabase = await createClient();
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { success: false, message: "Unauthorized" };
+
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+    if (profile?.role !== "admin") return { success: false, message: "Unauthorized" };
+
+    if (!productId) return { success: false, message: "Missing product id" };
+
+    // Fetch for audit metadata before deleting
+    const { data: product } = await supabase
+        .from("products")
+        .select("name")
+        .eq("id", productId)
+        .single();
+
+    const { error } = await supabase.from("products").delete().eq("id", productId);
+    if (error) return { success: false, message: error.message };
+
+    const { logAdminAction } = await import("@/lib/audit");
+    await logAdminAction(supabase, {
+        action: "product:delete",
+        resourceType: "product",
+        resourceId: productId,
+        metadata: { productName: (product as { name?: string } | null)?.name ?? null },
+    });
+
     revalidatePath("/", "layout");
     revalidatePath("/admin/products");
 
@@ -51,6 +172,13 @@ interface CreatePaymentIntentArgs {
 }
 
 export async function createPaymentIntent({ cart, email }: CreatePaymentIntentArgs) {
+    // Rate limit: 5 payment intents per email per 10 minutes
+    const { rateLimit } = await import("@/lib/security/rate-limit");
+    const rl = rateLimit(`payment:${email}`, 5, 10 * 60 * 1000);
+    if (!rl.allowed) {
+        return { success: false, error: "Too many checkout attempts. Please wait a few minutes." };
+    }
+
     if (!cart || cart.length === 0) {
         return { success: false, error: "Your basket is empty" };
     }
@@ -133,7 +261,7 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
     }
 
     try {
-        const paymentIntent = await stripe.paymentIntents.create({
+        const paymentIntent = await getStripe().paymentIntents.create({
             amount: amountInPence,
             currency: "gbp",
             automatic_payment_methods: { enabled: true },
@@ -161,11 +289,12 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
             subtotal,
             vatAmount,
         };
-    } catch (err: any) {
+    } catch (err: unknown) {
         await supabase.from("order_items").delete().eq("order_id", order.id);
         await supabase.from("orders").delete().eq("id", order.id);
         console.error("Stripe error:", err);
-        return { success: false, error: err.message };
+        const message = err instanceof Error ? err.message : "Unknown error";
+        return { success: false, error: message };
     }
 }
 
@@ -206,7 +335,7 @@ export async function updateOrderShipping(
         return { success: false, error: "Authentication required" };
     }
 
-    const { error, count } = await query.select("id", { count: "exact" });
+    const { error, count } = await query.select("id");
 
     if (error) return { success: false, error: error.message };
     if (count === 0) return { success: false, error: "Order not found or not authorized" };
@@ -231,6 +360,7 @@ export async function getOrderByToken(token: string) {
 // =============================================
 // LINK GUEST ORDERS TO ACCOUNT
 // =============================================
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function linkGuestOrdersToAccount(_email: string) {
     const supabase = await createClient();
     const {

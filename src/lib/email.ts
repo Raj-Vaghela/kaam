@@ -1,10 +1,14 @@
 import { Resend } from "resend";
 import { BRAND } from "./brand";
+import { escapeHtml } from "./security/sanitize";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-function escapeHtml(str: string): string {
-    return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// Lazy-init to avoid build-time crash when RESEND_API_KEY is not yet set
+let _resend: Resend | null = null;
+function getResend(): Resend {
+    if (!_resend) {
+        _resend = new Resend(process.env.RESEND_API_KEY);
+    }
+    return _resend;
 }
 
 // Brand colors used inline (email clients strip <style>)
@@ -54,10 +58,10 @@ export async function sendOrderConfirmation(data: OrderEmailData) {
     const inner = `
         <div style="background: linear-gradient(135deg, ${TEAL_DEEP} 0%, ${TEAL} 100%); color: white; padding: 40px 32px; border-radius: 20px; text-align: center; margin-bottom: 28px;">
             <h2 style="margin: 0 0 8px; font-size: 28px; font-weight: 700;">Bahot bahot dhanyavaad!</h2>
-            <p style="margin: 0; opacity: 0.85; font-size: 15px;">Order #${orderId}</p>
+            <p style="margin: 0; opacity: 0.85; font-size: 15px;">Order #${escapeHtml(orderId)}</p>
         </div>
 
-        <p style="font-size: 16px;">Hi ${customerName},</p>
+        <p style="font-size: 16px;">Hi ${escapeHtml(customerName)},</p>
         <p style="color: ${INK_SOFT};">Your order has been confirmed and is being prepared with love. We'll be in touch the moment it ships.</p>
 
         <div style="background: ${CREAM_SOFT}; padding: 20px 24px; border-radius: 16px; margin: 24px 0; border: 1px solid #ebe3d2;">
@@ -73,7 +77,7 @@ export async function sendOrderConfirmation(data: OrderEmailData) {
     `;
 
     try {
-        const { data: result, error } = await resend.emails.send({
+        const { data: result, error } = await getResend().emails.send({
             from: `${BRAND.name} <orders@${process.env.RESEND_DOMAIN || "resend.dev"}>`,
             to: customerEmail,
             subject: `Order confirmed · ${orderId} · ${BRAND.name}`,
@@ -100,7 +104,7 @@ export async function sendAccountCreationInvite(data: AccountCreationEmailData) 
     const { customerEmail, customerName, createAccountUrl } = data;
 
     const inner = `
-        <p style="font-size: 16px;">Hi ${customerName},</p>
+        <p style="font-size: 16px;">Hi ${escapeHtml(customerName)},</p>
         <p style="color: ${INK_SOFT};">Thanks for shopping with us! Create a free ${BRAND.name} account to make next time even easier:</p>
 
         <ul style="padding-left: 20px; color: ${INK_SOFT}; line-height: 1.9;">
@@ -117,7 +121,7 @@ export async function sendAccountCreationInvite(data: AccountCreationEmailData) 
     `;
 
     try {
-        const { data: result, error } = await resend.emails.send({
+        const { data: result, error } = await getResend().emails.send({
             from: `${BRAND.name} <orders@${process.env.RESEND_DOMAIN || "resend.dev"}>`,
             to: customerEmail,
             subject: `Create your ${BRAND.name} account`,

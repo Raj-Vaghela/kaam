@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ShoppingBag, X, Minus, Plus, ArrowRight, Trash2 } from "lucide-react";
 import { CartItem } from "@/types";
 import Link from "next/link";
@@ -88,11 +89,14 @@ export default function TrolleyDrawer({
                                 key={item.id}
                                 className="flex gap-3 p-3 bg-cream-soft rounded-2xl border border-cream-deep"
                             >
-                                <img
-                                    src={item.image}
-                                    alt={item.name}
-                                    className="w-20 h-20 object-cover rounded-xl bg-white"
-                                />
+                                <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-white shrink-0">
+                                    <Image
+                                        src={item.image}
+                                        alt={item.name}
+                                        fill
+                                        className="object-cover"
+                                    />
+                                </div>
                                 <div className="flex-grow min-w-0">
                                     <div className="flex justify-between items-start gap-2">
                                         <h4 className="font-display text-sm text-ink line-clamp-2 leading-tight">

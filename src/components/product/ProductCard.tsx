@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Star, Plus, Check } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Product } from "@/types";
@@ -33,10 +34,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="group bg-cream-soft border border-cream-deep rounded-3xl overflow-hidden flex flex-col hover:shadow-[var(--shadow-lift)] hover:-translate-y-1 transition-all duration-300">
             {/* Image */}
             <div className="relative aspect-square bg-white overflow-hidden">
-                <img
+                <Image
                     src={product.imgUrl}
                     alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute top-3 left-3 flex flex-col gap-1.5">
                     {product.bestseller && (

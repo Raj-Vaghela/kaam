@@ -6,7 +6,7 @@ export default async function AdminInvoicesPage() {
 
     const { data: invoices, error } = await supabase
         .from("invoices")
-        .select(`*, orders ( id, status, guest_email, user_id )`)
+        .select(`*, orders!invoices_order_id_fkey ( id, status, guest_email, user_id )`)
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -42,6 +42,7 @@ export default async function AdminInvoicesPage() {
                     </thead>
                     <tbody className="divide-y divide-cream-deep">
                         {invoices && invoices.length > 0 ? (
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             invoices.map((invoice: any) => (
                                 <tr key={invoice.id} className="hover:bg-cream/60 transition-colors">
                                     <td className="px-6 py-4">

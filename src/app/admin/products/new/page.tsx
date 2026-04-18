@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { ArrowLeft, Upload, X, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -36,8 +37,8 @@ export default function AddProductPage() {
             if (uploadError) throw uploadError;
             const { data: { publicUrl } } = supabase.storage.from("products").getPublicUrl(fileName);
             setImageUrl(publicUrl);
-        } catch (error: any) {
-            alert("Error uploading image: " + error.message);
+        } catch (error: unknown) {
+            alert("Error uploading image: " + (error instanceof Error ? error.message : String(error)));
         } finally {
             setUploading(false);
         }
@@ -56,8 +57,8 @@ export default function AddProductPage() {
                 router.push("/admin/products");
                 router.refresh();
             }
-        } catch (err: any) {
-            alert("Error creating product: " + err.message);
+        } catch (err: unknown) {
+            alert("Error creating product: " + (err instanceof Error ? err.message : String(err)));
         } finally {
             setLoading(false);
         }
@@ -132,7 +133,7 @@ export default function AddProductPage() {
                         </div>
                     ) : (
                         <div className="relative w-full h-64 bg-cream rounded-2xl overflow-hidden border border-cream-deep">
-                            <img src={imageUrl} alt="Preview" className="w-full h-full object-contain" />
+                            <Image src={imageUrl} alt="Preview" fill className="object-contain" />
                             <button
                                 type="button"
                                 onClick={() => setImageUrl("")}

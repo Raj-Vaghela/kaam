@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
@@ -28,7 +29,7 @@ export default function HeroSection() {
                     </p>
 
                     <p className="text-lg text-ink-soft max-w-xl mb-10 leading-relaxed">
-                        From Aashirvaad atta to Haldiram's namkeen, MDH masalas to Amul ghee —
+                        From Aashirvaad atta to Haldiram&apos;s namkeen, MDH masalas to Amul ghee —
                         every ingredient your kitchen calls for, hand-picked and at your door
                         by tomorrow.
                     </p>
@@ -64,17 +65,19 @@ export default function HeroSection() {
                 {/* Image collage */}
                 <div className="lg:col-span-5 relative h-[420px] sm:h-[520px] lg:h-[620px]">
                     <div className="absolute top-0 right-0 w-[78%] h-[68%] rounded-[2rem] overflow-hidden shadow-[var(--shadow-lift)] grain">
-                        <img
+                        <Image
                             src="https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=900"
                             alt="Indian spices"
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
                         />
                     </div>
                     <div className="absolute bottom-0 left-0 w-[62%] h-[58%] rounded-[2rem] overflow-hidden shadow-[var(--shadow-lift)] border-4 border-cream animate-float">
-                        <img
+                        <Image
                             src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&q=80&w=700"
                             alt="Traditional Indian sweets"
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
                         />
                     </div>
                     {/* Floating badge */}

@@ -129,6 +129,7 @@ export function generateInvoicePDF(data: InvoiceData): Buffer {
         },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const finalY = (doc as any).lastAutoTable.finalY + 10;
 
     // Totals

@@ -8,6 +8,7 @@ interface Props {
     params: Promise<{ token: string }>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const statusConfig: Record<string, { icon: any; tone: string; label: string }> = {
     pending: { icon: Clock, tone: "bg-haldi-soft text-haldi", label: "Pending Payment" },
     paid: { icon: CheckCircle, tone: "bg-leaf-soft text-leaf", label: "Order Confirmed" },
@@ -77,6 +78,7 @@ export default async function OrderTrackingPage({ params }: Props) {
                             <Package size={14} className="text-accent" /> Items
                         </h2>
                         <ul className="divide-y divide-cream-deep">
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {order.order_items.map((item: any) => (
                                 <li key={item.id} className="flex justify-between items-center py-3">
                                     <div>

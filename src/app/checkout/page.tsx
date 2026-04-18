@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useCart } from "@/context/CartContext";
 import { createPaymentIntent } from "@/app/actions";
@@ -104,7 +105,7 @@ export default function CheckoutPage() {
                                 Where should we send your receipt?
                             </h2>
                             <p className="text-sm text-ink-mute mb-6">
-                                We'll send your order confirmation, invoice, and tracking link
+                                We&apos;ll send your order confirmation, invoice, and tracking link
                                 here.
                             </p>
                             <input
@@ -159,10 +160,11 @@ export default function CheckoutPage() {
                             {cart.map((item) => (
                                 <div key={item.id} className="flex gap-3">
                                     <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-white shrink-0">
-                                        <img
+                                        <Image
                                             src={item.image}
                                             alt={item.name}
-                                            className="w-full h-full object-cover"
+                                            fill
+                                            className="object-cover"
                                         />
                                         <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--gajju-teal-deep)] text-cream text-[10px] font-bold flex items-center justify-center">
                                             {item.qty}

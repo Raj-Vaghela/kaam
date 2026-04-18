@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Truck, ShieldCheck, Heart, ChevronRight } from "lucide-react";
 import { CATEGORY_IMAGES, CATEGORIES } from "@/data/mockData";
 import Link from "next/link";
@@ -70,10 +71,11 @@ export default function HomeFeatures() {
                             href={`/products?category=${encodeURIComponent(cat)}`}
                             className="group relative rounded-3xl overflow-hidden aspect-[4/5] shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-lift)] transition-shadow"
                         >
-                            <img
+                            <Image
                                 src={CATEGORY_IMAGES[cat]}
                                 alt={cat}
-                                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-700"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-[var(--gajju-ink)]/85 via-[var(--gajju-ink)]/20 to-transparent" />
                             <div className="absolute inset-x-0 bottom-0 p-5 flex items-end justify-between">

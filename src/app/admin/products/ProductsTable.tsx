@@ -1,0 +1,122 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { Edit, Search } from "lucide-react";
+import DeleteProductButton from "./DeleteProductButton";
+
+interface ProductRow {
+    id: string;
+    name: string;
+    category: string | null;
+    price: number;
+    image_url: string | null;
+    stock: number | null;
+}
+
+export default function ProductsTable({ products }: { products: ProductRow[] }) {
+    const [query, setQuery] = useState("");
+
+    const filtered = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        if (!q) return products;
+        return products.filter((p) => {
+            return (
+                p.name.toLowerCase().includes(q) ||
+                (p.category ?? "").toLowerCase().includes(q)
+            );
+        });
+    }, [products, query]);
+
+    return (
+        <div className="bg-cream-soft border border-cream-deep rounded-3xl overflow-hidden">
+            <div className="p-5 border-b border-cream-deep">
+                <div className="relative max-w-md">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-mute" size={18} />
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Search products…"
+                        className="w-full pl-11 pr-4 py-3 bg-cream border border-cream-deep rounded-full focus:outline-none focus:border-accent text-sm"
+                    />
+                </div>
+                {query && (
+                    <p className="mt-2 text-xs text-ink-mute">
+                        {filtered.length} of {products.length} matching
+                    </p>
+                )}
+            </div>
+
+            <table className="w-full text-left text-sm">
+                <thead className="bg-cream text-ink-mute text-xs font-semibold uppercase tracking-wider">
+                    <tr>
+                        <th className="px-6 py-4">Product</th>
+                        <th className="px-6 py-4">Category</th>
+                        <th className="px-6 py-4">Price</th>
+                        <th className="px-6 py-4">Stock</th>
+                        <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-cream-deep">
+                    {filtered.map((product) => (
+                        <tr key={product.id} className="hover:bg-cream/60 transition-colors">
+                            <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={product.image_url || "https://placehold.co/100"}
+                                        alt={product.name}
+                                        className="w-11 h-11 rounded-xl object-cover bg-cream"
+                                    />
+                                    <span className="font-semibold text-ink">{product.name}</span>
+                                </div>
+                            </td>
+                            <td className="px-6 py-4 text-ink-soft">{product.category}</td>
+                            <td className="px-6 py-4 font-semibold text-ink">
+                                £{(Number(product.price) || 0).toFixed(2)}
+                            </td>
+                            <td className="px-6 py-4">
+                                <span
+                                    className={`inline-flex py-1 px-3 rounded-full text-xs font-semibold ${
+                                        (product.stock ?? 0) > 0
+                                            ? "bg-leaf-soft text-leaf"
+                                            : "bg-rose/10 text-rose"
+                                    }`}
+                                >
+                                    {(product.stock ?? 0) > 0
+                                        ? `${product.stock} in stock`
+                                        : "Out of stock"}
+                                </span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                                <div className="flex justify-end gap-2">
+                                    <Link
+                                        href={`/admin/products/${product.id}/edit`}
+                                        aria-label={`Edit ${product.name}`}
+                                        className="p-2 text-ink-mute hover:text-accent hover:bg-accent-soft rounded-xl transition-colors"
+                                    >
+                                        <Edit size={16} />
+                                    </Link>
+                                    <DeleteProductButton
+                                        productId={product.id}
+                                        productName={product.name}
+                                    />
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                    {filtered.length === 0 && (
+                        <tr>
+                            <td colSpan={5} className="px-6 py-12 text-center text-ink-mute">
+                                {products.length === 0
+                                    ? "No products yet. Add your first."
+                                    : "No products match your search."}
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
+}
