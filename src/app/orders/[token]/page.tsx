@@ -2,161 +2,126 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Package, MapPin, Receipt, ArrowLeft, CheckCircle, Clock, Truck, XCircle } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 
 interface Props {
-    params: { token: string };
+    params: Promise<{ token: string }>;
 }
 
-const statusConfig: Record<string, { icon: any; color: string; label: string }> = {
-    pending: { icon: Clock, color: "text-amber-600 bg-amber-100", label: "Pending Payment" },
-    paid: { icon: CheckCircle, color: "text-emerald-600 bg-emerald-100", label: "Order Confirmed" },
-    processing: { icon: Package, color: "text-blue-600 bg-blue-100", label: "Processing" },
-    shipped: { icon: Truck, color: "text-indigo-600 bg-indigo-100", label: "Shipped" },
-    delivered: { icon: CheckCircle, color: "text-emerald-600 bg-emerald-100", label: "Delivered" },
-    cancelled: { icon: XCircle, color: "text-red-600 bg-red-100", label: "Cancelled" },
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const statusConfig: Record<string, { icon: any; tone: string; label: string }> = {
+    pending: { icon: Clock, tone: "bg-haldi-soft text-haldi", label: "Pending Payment" },
+    paid: { icon: CheckCircle, tone: "bg-leaf-soft text-leaf", label: "Order Confirmed" },
+    processing: { icon: Package, tone: "bg-accent-soft text-accent", label: "Processing" },
+    shipped: { icon: Truck, tone: "bg-[var(--gajju-teal-soft)] text-[var(--gajju-teal-deep)]", label: "Shipped" },
+    delivered: { icon: CheckCircle, tone: "bg-leaf-soft text-leaf", label: "Delivered" },
+    cancelled: { icon: XCircle, tone: "bg-red-100 text-rose", label: "Cancelled" },
 };
 
 export default async function OrderTrackingPage({ params }: Props) {
-    const { token } = params;
+    const { token } = await params;
     const supabase = await createClient();
 
-    // Fetch order by guest token
     const { data: order, error } = await supabase
         .from("orders")
-        .select(`
-            *,
-            order_items (*),
-            invoices (*)
-        `)
+        .select(`*, order_items (*), invoices (*)`)
         .eq("guest_token", token)
         .single();
 
-    if (error || !order) {
-        notFound();
-    }
+    if (error || !order) notFound();
 
     const status = statusConfig[order.status] || statusConfig.pending;
     const StatusIcon = status.icon;
 
     return (
-        <div className="max-w-3xl mx-auto px-4 py-8">
-            <Link
-                href="/"
-                className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 text-sm font-medium mb-8"
-            >
-                <ArrowLeft size={16} />
-                Back to Store
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <Link href="/" className="inline-flex items-center gap-2 text-ink-mute hover:text-accent text-sm font-medium mb-8">
+                <ArrowLeft size={16} /> Back to {BRAND.name}
             </Link>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                {/* Header */}
-                <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-xl font-bold text-slate-900">Order Tracking</h1>
-                            <p className="text-sm text-slate-500">
-                                Order #{order.id.slice(0, 8).toUpperCase()}
-                            </p>
-                        </div>
-                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${status.color}`}>
-                            <StatusIcon size={16} />
-                            <span className="text-sm font-medium">{status.label}</span>
-                        </div>
+            <div className="mb-8">
+                <p className="text-xs font-semibold tracking-widest uppercase text-accent mb-2">Tracking</p>
+                <h1 className="font-display text-5xl text-ink">Your order</h1>
+            </div>
+
+            <div className="bg-cream-soft border border-cream-deep rounded-3xl overflow-hidden">
+                <div className="px-8 py-6 border-b border-cream-deep flex items-center justify-between flex-wrap gap-4 bg-white">
+                    <div>
+                        <p className="text-[10px] uppercase tracking-wider text-ink-mute">Order ID</p>
+                        <p className="font-display text-2xl text-ink">#{order.id.slice(0, 8).toUpperCase()}</p>
+                    </div>
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${status.tone}`}>
+                        <StatusIcon size={16} />
+                        <span className="text-sm font-semibold">{status.label}</span>
                     </div>
                 </div>
 
-                {/* Order Details */}
-                <div className="p-6 space-y-6">
-                    {/* Delivery Address */}
+                <div className="p-8 space-y-8">
                     <div>
-                        <h2 className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                            <MapPin size={16} className="text-emerald-600" />
-                            Delivery Address
+                        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-mute mb-3">
+                            <MapPin size={14} className="text-accent" /> Delivery address
                         </h2>
-                        <div className="bg-slate-50 rounded-lg p-4 text-sm text-slate-700">
-                            <p className="font-medium">{order.shipping_address?.fullName}</p>
-                            <p>{order.shipping_address?.addressLine1}</p>
-                            {order.shipping_address?.addressLine2 && (
-                                <p>{order.shipping_address.addressLine2}</p>
-                            )}
-                            <p>
-                                {order.shipping_address?.city}, {order.shipping_address?.postcode}
-                            </p>
-                        </div>
+                        {order.shipping_address ? (
+                            <address className="not-italic text-ink leading-relaxed">
+                                <strong>{order.shipping_address.fullName}</strong><br />
+                                {order.shipping_address.addressLine1}<br />
+                                {order.shipping_address.addressLine2 && <>{order.shipping_address.addressLine2}<br /></>}
+                                {order.shipping_address.city}, {order.shipping_address.postcode}
+                            </address>
+                        ) : (
+                            <p className="text-ink-mute text-sm">No address provided yet.</p>
+                        )}
                     </div>
 
-                    {/* Order Items */}
                     <div>
-                        <h2 className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
-                            <Package size={16} className="text-emerald-600" />
-                            Order Items
+                        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-mute mb-3">
+                            <Package size={14} className="text-accent" /> Items
                         </h2>
-                        <div className="space-y-3">
+                        <ul className="divide-y divide-cream-deep">
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {order.order_items.map((item: any) => (
-                                <div
-                                    key={item.id}
-                                    className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0"
-                                >
+                                <li key={item.id} className="flex justify-between items-center py-3">
                                     <div>
-                                        <p className="font-medium text-slate-900">{item.product_name}</p>
-                                        <p className="text-sm text-slate-500">Qty: {item.quantity}</p>
+                                        <p className="font-medium text-ink">{item.product_name}</p>
+                                        <p className="text-xs text-ink-mute">Qty: {item.quantity}</p>
                                     </div>
-                                    <p className="font-medium text-slate-900">
+                                    <p className="font-semibold text-ink">
                                         £{(item.unit_price * item.quantity).toFixed(2)}
                                     </p>
-                                </div>
+                                </li>
                             ))}
-                        </div>
+                        </ul>
                     </div>
 
-                    {/* Total */}
-                    <div className="border-t border-slate-200 pt-4">
-                        <div className="flex justify-between text-lg font-bold">
-                            <span>Total</span>
-                            <span className="text-emerald-700">£{order.total.toFixed(2)}</span>
-                        </div>
+                    <div className="border-t border-cream-deep pt-5 flex justify-between font-display text-2xl text-ink">
+                        <span>Total</span>
+                        <span className="text-accent">£{Number(order.total).toFixed(2)}</span>
                     </div>
 
-                    {/* Invoice Link */}
                     {order.invoices && order.invoices.length > 0 && (
-                        <div className="bg-slate-50 rounded-lg p-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Receipt size={20} className="text-emerald-600" />
-                                    <div>
-                                        <p className="font-medium text-slate-900">Invoice</p>
-                                        <p className="text-sm text-slate-500">
-                                            {order.invoices[0].invoice_number}
-                                        </p>
-                                    </div>
+                        <div className="bg-white rounded-2xl p-5 flex items-center justify-between border border-cream-deep">
+                            <div className="flex items-center gap-3">
+                                <Receipt size={22} className="text-accent" />
+                                <div>
+                                    <p className="font-medium text-ink">Invoice</p>
+                                    <p className="text-xs text-ink-mute">{order.invoices[0].invoice_number}</p>
                                 </div>
-                                {order.invoices[0].pdf_url && (
-                                    <a
-                                        href={order.invoices[0].pdf_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
-                                    >
-                                        Download PDF
-                                    </a>
-                                )}
                             </div>
+                            {order.invoices[0].pdf_url && (
+                                <a href={order.invoices[0].pdf_url} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-accent hover:text-accent-deep">
+                                    Download PDF
+                                </a>
+                            )}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Create Account CTA */}
-            <div className="mt-8 bg-slate-50 rounded-xl border border-slate-200 p-6 text-center">
-                <h2 className="font-bold text-slate-900 mb-2">Want to track all your orders?</h2>
-                <p className="text-sm text-slate-600 mb-4">
-                    Create an account to manage orders, re-order favourites, and get exclusive offers.
-                </p>
-                <Link
-                    href={`/orders/${token}/create-account`}
-                    className="inline-flex items-center gap-2 bg-emerald-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
-                >
-                    Create Account
+            <div className="mt-10 bg-[var(--gajju-teal-deep)] text-cream rounded-3xl p-8 text-center">
+                <h2 className="font-display text-2xl mb-2">Track every order in one place</h2>
+                <p className="text-sm text-cream/70 mb-5">Create a free account to view past orders, save addresses, and re-order in seconds.</p>
+                <Link href={`/orders/${token}/create-account`} className="inline-block bg-accent hover:bg-[var(--gajju-terracotta-deep)] text-white px-7 py-3 rounded-full font-semibold text-sm transition-colors">
+                    Create my account
                 </Link>
             </div>
         </div>

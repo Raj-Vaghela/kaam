@@ -7,19 +7,25 @@ import { useCart } from "@/context/CartContext";
 import { usePathname } from "next/navigation";
 
 export default function ClientShell({ children }: { children: React.ReactNode }) {
-    const { cart, cartOpen, setCartOpen, removeFromCart, updateQty, cartTotal, cartCount, checkout } = useCart();
+    const {
+        cart,
+        cartOpen,
+        setCartOpen,
+        removeFromCart,
+        updateQty,
+        cartTotal,
+        cartCount,
+        checkout,
+    } = useCart();
 
-    // safe access to pathname
     const pathname = usePathname();
     const currentPath = pathname ? pathname.toLowerCase() : "";
-
-    // Strict checks for admin and auth routes
     const isAuthPage = currentPath.startsWith("/auth");
     const isAdminPage = currentPath.startsWith("/admin");
     const isSpecialLayout = isAuthPage || isAdminPage;
 
     return (
-        <div className="min-h-screen font-sans bg-slate-50 text-slate-900 flex flex-col">
+        <div className="min-h-screen flex flex-col bg-cream text-ink">
             {!isSpecialLayout && (
                 <Header
                     cartCount={cartCount}
@@ -27,9 +33,7 @@ export default function ClientShell({ children }: { children: React.ReactNode })
                     onCartClick={() => setCartOpen(true)}
                 />
             )}
-            <main className="flex-grow">
-                {children}
-            </main>
+            <main className="flex-grow">{children}</main>
             {!isSpecialLayout && <Footer />}
 
             {!isSpecialLayout && (

@@ -19,7 +19,9 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CART_STORAGE_KEY = "desimart-cart";
+const CART_STORAGE_KEY = "gajjuexpress-cart";
+// Legacy key from old brand name — migrate any existing cart data on first load
+const LEGACY_CART_KEY = "desimart-cart";
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const [cart, setCart] = useState<CartItem[]>([]);
@@ -27,11 +29,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const [isHydrated, setIsHydrated] = useState(false);
     const router = useRouter();
 
-    // Load cart from localStorage on mount
+    // Load cart from localStorage on mount.
+    // Also performs a one-time migration from the legacy "desimart-cart" key
+    // so existing users don't lose their cart after the rebrand.
     useEffect(() => {
+        const legacy = localStorage.getItem(LEGACY_CART_KEY);
+        if (legacy) {
+            localStorage.setItem(CART_STORAGE_KEY, legacy);
+            localStorage.removeItem(LEGACY_CART_KEY);
+        }
+
         const savedCart = localStorage.getItem(CART_STORAGE_KEY);
         if (savedCart) {
             try {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setCart(JSON.parse(savedCart));
             } catch {
                 localStorage.removeItem(CART_STORAGE_KEY);
@@ -75,10 +86,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const removeFromCart = (id: string) =>
         setCart((prev) => prev.filter((item) => item.id !== id));
 
-    const updateQty = (id: string, newQty: number) =>
+    const updateQty = (id: string, newQty: number) => {
+        // Treat qty < 1 as a remove — prevents zero-quantity items in cart and DB
+        if (newQty < 1) {
+            removeFromCart(id);
+            return;
+        }
         setCart((prev) =>
             prev.map((item) => (item.id === id ? { ...item, qty: newQty } : item))
         );
+    };
 
     const clearCart = () => {
         setCart([]);

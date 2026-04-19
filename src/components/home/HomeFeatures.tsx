@@ -1,90 +1,91 @@
 "use client";
 
-import { Clock, ShieldCheck, Tag, ChevronRight } from "lucide-react";
+import Image from "next/image";
+import { Truck, ShieldCheck, Heart, ChevronRight } from "lucide-react";
 import { CATEGORY_IMAGES, CATEGORIES } from "@/data/mockData";
 import Link from "next/link";
 
+const PROMISES = [
+    {
+        icon: Truck,
+        title: "Next-day delivery",
+        body: "Order by 8pm, on your doorstep tomorrow.",
+    },
+    {
+        icon: ShieldCheck,
+        title: "Authentic, always",
+        body: "Direct from the brands you grew up with.",
+    },
+    {
+        icon: Heart,
+        title: "Made for your kitchen",
+        body: "Curated by Indian families, for Indian families.",
+    },
+];
+
 export default function HomeFeatures() {
-    const displayCategories = CATEGORIES.filter((cat) => cat !== "All").slice(
-        0,
-        8
-    );
+    const displayCategories = CATEGORIES.filter((c) => c !== "All").slice(0, 8);
 
     return (
-        <div className="max-w-7xl mx-auto px-4 py-8">
-            {/* Service Promises */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-16">
-                <div className="bg-white p-5 rounded border border-slate-200 flex items-center gap-5 shadow-sm hover:border-emerald-500 transition-all cursor-pointer group hover:shadow-md">
-                    <div className="bg-emerald-50 text-emerald-800 p-3 rounded-full group-hover:bg-emerald-800 group-hover:text-white transition-colors">
-                        <Clock size={24} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+            {/* Promises */}
+            <div className="grid sm:grid-cols-3 gap-5 mb-24">
+                {PROMISES.map(({ icon: Icon, title, body }) => (
+                    <div
+                        key={title}
+                        className="group bg-cream-soft border border-cream-deep rounded-3xl p-6 flex items-start gap-5 hover:bg-white hover:shadow-[var(--shadow-soft)] transition-all"
+                    >
+                        <div className="w-12 h-12 rounded-2xl bg-accent-soft text-accent flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-colors shrink-0">
+                            <Icon size={22} />
+                        </div>
+                        <div>
+                            <h3 className="font-display text-lg text-ink mb-1">{title}</h3>
+                            <p className="text-sm text-ink-mute leading-relaxed">{body}</p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="font-serif font-bold text-slate-900 text-lg group-hover:text-emerald-800 transition-colors">
-                            Next Day Delivery
-                        </h3>
-                        <p className="text-slate-500 text-xs">
-                            Slots available from 8am tomorrow
-                        </p>
-                    </div>
-                </div>
-                <div className="bg-white p-5 rounded border border-slate-200 flex items-center gap-5 shadow-sm hover:border-emerald-500 transition-all cursor-pointer group hover:shadow-md">
-                    <div className="bg-emerald-50 text-emerald-800 p-3 rounded-full group-hover:bg-emerald-800 group-hover:text-white transition-colors">
-                        <ShieldCheck size={24} />
-                    </div>
-                    <div>
-                        <h3 className="font-serif font-bold text-slate-900 text-lg group-hover:text-emerald-800 transition-colors">
-                            Authentic Quality
-                        </h3>
-                        <p className="text-slate-500 text-xs">
-                            100% genuine imported brands
-                        </p>
-                    </div>
-                </div>
-                <div className="bg-white p-5 rounded border border-slate-200 flex items-center gap-5 shadow-sm hover:border-emerald-500 transition-all cursor-pointer group hover:shadow-md">
-                    <div className="bg-emerald-50 text-emerald-800 p-3 rounded-full group-hover:bg-emerald-800 group-hover:text-white transition-colors">
-                        <Tag size={24} />
-                    </div>
-                    <div>
-                        <h3 className="font-serif font-bold text-slate-900 text-lg group-hover:text-emerald-800 transition-colors">
-                            Price Match
-                        </h3>
-                        <p className="text-slate-500 text-xs">
-                            We match prices on 100+ items
-                        </p>
-                    </div>
-                </div>
+                ))}
             </div>
 
-            {/* Shop by Category */}
-            <div className="mb-12">
-                <div className="flex justify-between items-end mb-6 border-b border-slate-200 pb-2">
-                    <h2 className="text-3xl font-serif font-bold text-slate-900">
-                        Shop by Category
-                    </h2>
+            {/* Shop by category */}
+            <div>
+                <div className="flex justify-between items-end mb-8">
+                    <div>
+                        <p className="text-xs font-semibold tracking-widest uppercase text-accent mb-2">
+                            Browse the aisles
+                        </p>
+                        <h2 className="font-display text-4xl sm:text-5xl text-ink">
+                            Shop by category
+                        </h2>
+                    </div>
                     <Link
                         href="/products"
-                        className="text-emerald-700 font-bold hover:underline flex items-center gap-1 text-sm"
+                        className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-[var(--gajju-teal-deep)] hover:text-accent transition-colors"
                     >
-                        View All <ChevronRight size={14} />
+                        View all <ChevronRight size={16} />
                     </Link>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
                     {displayCategories.map((cat) => (
                         <Link
                             key={cat}
-                            href={`/products?category=${cat}`}
-                            className="group relative rounded-lg overflow-hidden aspect-[4/3] cursor-pointer shadow-md hover:shadow-xl transition-all"
+                            href={`/products?category=${encodeURIComponent(cat)}`}
+                            className="group relative rounded-3xl overflow-hidden aspect-[4/5] shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-lift)] transition-shadow"
                         >
-                            <img
+                            <Image
                                 src={CATEGORY_IMAGES[cat]}
                                 alt={cat}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-700"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent" />
-                            <div className="absolute inset-0 flex items-end p-4">
-                                <h3 className="text-white font-serif font-bold text-lg group-hover:text-amber-400 transition-colors">
+                            <div className="absolute inset-0 bg-gradient-to-t from-[var(--gajju-ink)]/85 via-[var(--gajju-ink)]/20 to-transparent" />
+                            <div className="absolute inset-x-0 bottom-0 p-5 flex items-end justify-between">
+                                <h3 className="font-display text-2xl text-cream leading-tight">
                                     {cat}
                                 </h3>
+                                <ChevronRight
+                                    size={20}
+                                    className="text-haldi opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
+                                />
                             </div>
                         </Link>
                     ))}

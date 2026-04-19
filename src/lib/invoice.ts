@@ -1,40 +1,46 @@
-// Store configuration for invoices
+import crypto from "crypto";
+import { BRAND } from "./brand";
+
+// Store configuration for invoices — sourced from BRAND.
 export const storeConfig = {
-    name: "DesiMart Ltd",
+    name: BRAND.legalName,
     address: {
-        line1: "123 Spice Lane",
-        line2: "Brick Lane",
-        city: "London",
-        postcode: "E1 6QL",
-        country: "United Kingdom",
+        line1: BRAND.address.line1,
+        line2: BRAND.address.line2,
+        city: BRAND.address.city,
+        postcode: BRAND.address.postcode,
+        country: BRAND.address.country,
     },
-    vatNumber: "GB123456789",
-    vatRate: 20, // 20% VAT
-    email: "orders@desimart.co.uk",
-    phone: "+44 20 1234 5678",
-    website: "https://desimart.co.uk",
+    // TODO: Replace with the client's actual VAT number before go-live.
+    // Issuing invoices with a fabricated VAT number is a UK legal offence.
+    // If the business is not VAT-registered, remove vatNumber, vatRate, and
+    // the VAT line items from the PDF template and calculateVAT call entirely.
+    vatNumber: process.env.VAT_NUMBER || "PLACEHOLDER-UPDATE-BEFORE-GOLIVE",
+    vatRate: 20,
+    email: BRAND.contact.ordersEmail,
+    phone: BRAND.contact.phone,
+    website: "https://gajjuexpress.co.uk",
 };
 
-// Invoice number generation (format: INV-YYYYMM-XXXXX)
+// Invoice number generation (format: GJX-YYYYMM-XXXXXXXX)
+// Uses 8 hex chars (~4 billion combinations per month) to prevent collisions.
+// DB should also have a UNIQUE constraint on invoice_number as defense-in-depth.
+function cryptoRandomHex(bytes: number): string {
+    return crypto.randomBytes(bytes).toString("hex");
+}
+
 export function generateInvoiceNumber(): string {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
-    const random = Math.floor(Math.random() * 99999)
-        .toString()
-        .padStart(5, "0");
-    return `INV-${year}${month}-${random}`;
+    return `GJX-${year}${month}-${cryptoRandomHex(4).toUpperCase()}`;
 }
 
-// Credit note number generation (format: CN-YYYYMM-XXXXX)
 export function generateCreditNoteNumber(): string {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
-    const random = Math.floor(Math.random() * 99999)
-        .toString()
-        .padStart(5, "0");
-    return `CN-${year}${month}-${random}`;
+    return `CN-${year}${month}-${cryptoRandomHex(4).toUpperCase()}`;
 }
 
 export interface InvoiceItem {
@@ -62,8 +68,10 @@ export interface InvoiceData {
     total: number;
 }
 
-// Calculate VAT from subtotal
-export function calculateVAT(subtotal: number, vatRate: number = storeConfig.vatRate): { vatAmount: number; total: number } {
+export function calculateVAT(
+    subtotal: number,
+    vatRate: number = storeConfig.vatRate
+): { vatAmount: number; total: number } {
     const vatAmount = subtotal * (vatRate / 100);
     const total = subtotal + vatAmount;
     return {

@@ -1,11 +1,15 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
-import { ArrowLeft, Upload, X } from "lucide-react";
+import { ArrowLeft, Upload, X, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addProduct } from "@/app/actions";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 export default function AddProductPage() {
     const [loading, setLoading] = useState(false);
@@ -16,34 +20,25 @@ export default function AddProductPage() {
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            alert("Only PNG, JPEG, and WebP images are allowed.");
+            return;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            alert("File size must be under 10MB.");
+            return;
+        }
         setUploading(true);
-
         try {
-            const supabase = createBrowserClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-            );
-
-            const fileExt = file.name.split('.').pop();
+            const supabase = createClient();
+            const fileExt = file.name.split(".").pop();
             const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${fileName}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('products')
-                .upload(filePath, file);
-
-            if (uploadError) {
-                throw uploadError;
-            }
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('products')
-                .getPublicUrl(filePath);
-
+            const { error: uploadError } = await supabase.storage.from("products").upload(fileName, file);
+            if (uploadError) throw uploadError;
+            const { data: { publicUrl } } = supabase.storage.from("products").getPublicUrl(fileName);
             setImageUrl(publicUrl);
-        } catch (error: any) {
-            alert('Error uploading image: ' + error.message);
+        } catch (error: unknown) {
+            alert("Error uploading image: " + (error instanceof Error ? error.message : String(error)));
         } finally {
             setUploading(false);
         }
@@ -52,54 +47,45 @@ export default function AddProductPage() {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoading(true);
-
-        const formData = new FormData(e.currentTarget);
-
-        // If we have an uploaded image URL, ensure it's used
-        if (imageUrl) {
-            formData.set("image_url", imageUrl);
-        }
-
-        const result = await addProduct(formData);
-
-        if (!result.success) {
-            alert("Error creating product: " + result.message);
+        try {
+            const formData = new FormData(e.currentTarget);
+            if (imageUrl) formData.set("image_url", imageUrl);
+            const result = await addProduct(formData);
+            if (!result.success) {
+                alert("Error creating product: " + result.message);
+            } else {
+                router.push("/admin/products");
+                router.refresh();
+            }
+        } catch (err: unknown) {
+            alert("Error creating product: " + (err instanceof Error ? err.message : String(err)));
+        } finally {
             setLoading(false);
-        } else {
-            alert("Product created successfully!");
-            router.push("/admin/products");
-            router.refresh();
         }
     };
+
+    const labelCls = "block text-xs font-semibold text-ink-soft uppercase tracking-wider mb-1.5";
+    const inputCls = "w-full px-4 py-3 bg-white border border-cream-deep rounded-2xl focus:outline-none focus:border-accent text-sm";
 
     return (
         <div className="max-w-3xl mx-auto">
             <div className="mb-8">
-                <Link href="/admin/products" className="text-slate-500 hover:text-slate-900 flex items-center gap-2 mb-4 text-sm font-bold">
+                <Link href="/admin/products" className="inline-flex items-center gap-2 text-ink-mute hover:text-accent text-sm font-medium mb-4">
                     <ArrowLeft size={16} /> Back to Products
                 </Link>
-                <h1 className="text-2xl font-bold text-slate-900">Add New Product</h1>
+                <h1 className="font-display text-5xl text-ink">Add a new product</h1>
             </div>
 
-            <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
-                <div className="space-y-2">
-                    <label className="block text-sm font-bold text-slate-700">Product Name</label>
-                    <input
-                        name="name"
-                        required
-                        type="text"
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        placeholder="e.g., Royal Basmati Rice"
-                    />
+            <form onSubmit={handleSubmit} className="bg-cream-soft border border-cream-deep rounded-3xl p-8 space-y-6">
+                <div>
+                    <label htmlFor="product-name" className={labelCls}>Product Name</label>
+                    <input id="product-name" name="name" required type="text" className={inputCls} placeholder="e.g., Royal Basmati Rice" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="block text-sm font-bold text-slate-700">Category</label>
-                        <select
-                            name="category"
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        >
+                <div className="grid grid-cols-2 gap-5">
+                    <div>
+                        <label htmlFor="product-category" className={labelCls}>Category</label>
+                        <select id="product-category" name="category" className={inputCls}>
                             <option>Grains & Rice</option>
                             <option>Spices</option>
                             <option>Snacks</option>
@@ -109,57 +95,49 @@ export default function AddProductPage() {
                             <option>Personal Care</option>
                         </select>
                     </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-bold text-slate-700">Price (£)</label>
-                        <input
-                            name="price"
-                            required
-                            type="number"
-                            step="0.01"
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            placeholder="0.00"
-                        />
+                    <div>
+                        <label htmlFor="product-price" className={labelCls}>Price (£)</label>
+                        <input id="product-price" name="price" required type="number" step="0.01" className={inputCls} placeholder="0.00" />
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <label className="block text-sm font-bold text-slate-700">Product Image</label>
-
+                <div>
+                    <label className={labelCls}>Product Image</label>
                     {!imageUrl ? (
-                        <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition-colors relative">
+                        <div className="border-2 border-dashed border-cream-deep rounded-2xl p-10 text-center hover:bg-cream/60 transition-colors relative">
                             <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/png,image/jpeg,image/webp"
                                 onChange={handleImageUpload}
                                 disabled={uploading}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                             />
-                            <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
+                            <div className="flex flex-col items-center gap-2 text-ink-mute">
                                 {uploading ? (
                                     <>
-                                        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                                        <span className="text-sm font-medium">Uploading...</span>
+                                        <Loader2 className="animate-spin text-accent" size={28} />
+                                        <span className="text-sm font-medium">Uploading…</span>
                                     </>
                                 ) : (
                                     <>
-                                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
-                                            <Upload className="text-slate-400" size={20} />
+                                        <div className="w-12 h-12 rounded-2xl bg-accent-soft flex items-center justify-center">
+                                            <Upload className="text-accent" size={20} />
                                         </div>
                                         <div className="text-sm">
-                                            <span className="font-bold text-emerald-600">Click to upload</span> or drag and drop
+                                            <span className="font-semibold text-accent">Click to upload</span> or drag and drop
                                         </div>
-                                        <span className="text-xs">PNG, JPG up to 10MB</span>
+                                        <span className="text-xs">PNG, JPG, WebP up to 10MB</span>
                                     </>
                                 )}
                             </div>
                         </div>
                     ) : (
-                        <div className="relative w-full h-64 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 group">
-                            <img src={imageUrl} alt="Product preview" className="w-full h-full object-contain" />
+                        <div className="relative w-full h-64 bg-cream rounded-2xl overflow-hidden border border-cream-deep">
+                            <Image src={imageUrl} alt="Preview" fill className="object-contain" />
                             <button
                                 type="button"
                                 onClick={() => setImageUrl("")}
-                                className="absolute top-2 right-2 p-2 bg-white/90 text-slate-700 rounded-full shadow-sm hover:bg-red-50 hover:text-red-600 transition-colors"
+                                className="absolute top-3 right-3 p-2 bg-white/95 text-ink-soft rounded-full shadow-sm hover:text-rose transition-colors"
                             >
                                 <X size={16} />
                             </button>
@@ -168,42 +146,33 @@ export default function AddProductPage() {
                     )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="block text-sm font-bold text-slate-700">Unit</label>
-                        <input
-                            name="unit"
-                            type="text"
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            placeholder="e.g., 5kg"
-                        />
+                <div className="grid grid-cols-2 gap-5">
+                    <div>
+                        <label htmlFor="product-unit" className={labelCls}>Unit</label>
+                        <input id="product-unit" name="unit" type="text" className={inputCls} placeholder="e.g., 5kg" />
                     </div>
-                    <div className="space-y-2">
-                        <label className="block text-sm font-bold text-slate-700">Stock Count</label>
-                        <input
-                            name="stock"
-                            type="number"
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            placeholder="100"
-                        />
+                    <div>
+                        <label htmlFor="product-stock" className={labelCls}>Stock count</label>
+                        <input id="product-stock" name="stock" type="number" className={inputCls} placeholder="100" />
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <input name="bestseller" type="checkbox" id="bestseller" className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" />
-                    <label htmlFor="bestseller" className="text-sm font-medium text-slate-700">Mark as Best Seller</label>
+                    <input name="bestseller" type="checkbox" id="bestseller" className="w-4 h-4 accent-accent rounded" />
+                    <label htmlFor="bestseller" className="text-sm text-ink-soft">Mark as bestseller</label>
                 </div>
 
-                <div className="pt-4 border-t border-slate-100 flex justify-end gap-4">
-                    <Link href="/admin/products" className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-100 rounded-lg transition-colors">
+                <div className="pt-5 border-t border-cream-deep flex justify-end gap-3">
+                    <Link href="/admin/products" className="px-6 py-3 text-ink-soft font-medium hover:bg-cream rounded-full transition-colors">
                         Cancel
                     </Link>
                     <button
                         type="submit"
                         disabled={loading || uploading || !imageUrl}
-                        className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="btn-primary px-6 py-3 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {loading ? "Creating..." : "Create Product"}
+                        {loading && <Loader2 className="animate-spin" size={16} />}
+                        {loading ? "Creating…" : "Create product"}
                     </button>
                 </div>
             </form>

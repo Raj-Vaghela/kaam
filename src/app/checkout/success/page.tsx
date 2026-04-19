@@ -1,88 +1,137 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle, Package, ArrowRight, UserPlus } from "lucide-react";
+import { CheckCircle, Package, ArrowRight, UserPlus, Mail, Loader2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 export default function CheckoutSuccessPage() {
+    return (
+        <Suspense fallback={<div className="max-w-2xl mx-auto px-4 py-20 text-center"><Loader2 className="animate-spin text-ink-mute mx-auto" size={32} /></div>}>
+            <CheckoutSuccessInner />
+        </Suspense>
+    );
+}
+
+function CheckoutSuccessInner() {
     const searchParams = useSearchParams();
-    const sessionId = searchParams.get("session_id");
     const token = searchParams.get("token");
+    const orderId = searchParams.get("order_id");
+    const redirectStatus = searchParams.get("redirect_status");
     const { clearCart } = useCart();
     const [cleared, setCleared] = useState(false);
 
-    // Clear cart on success
+    const isSuccess = redirectStatus === "succeeded";
+
     useEffect(() => {
-        if (!cleared) {
+        if (!cleared && isSuccess && orderId) {
             clearCart();
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setCleared(true);
         }
-    }, [cleared, clearCart]);
+    }, [cleared, clearCart, isSuccess, orderId]);
+
+    if (!isSuccess) {
+        return (
+            <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+                <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-7">
+                    <CheckCircle size={52} className="text-rose" strokeWidth={1.6} />
+                </div>
+                <h1 className="font-display text-4xl text-ink mb-3">Payment not completed</h1>
+                <p className="text-lg text-ink-mute mb-8">
+                    Your payment was not successful. Please try again.
+                </p>
+                <Link href="/checkout" className="btn-primary inline-block px-8 py-3.5">
+                    Return to checkout
+                </Link>
+            </div>
+        );
+    }
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-            <div className="mb-8">
-                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <CheckCircle size={48} className="text-emerald-600" />
+        <div className="max-w-2xl mx-auto px-4 py-20">
+            <div className="text-center mb-10">
+                <div className="w-24 h-24 bg-leaf-soft rounded-full flex items-center justify-center mx-auto mb-7">
+                    <CheckCircle size={52} className="text-leaf" strokeWidth={1.6} />
                 </div>
-                <h1 className="text-3xl font-serif font-bold text-slate-900 mb-2">
-                    Thank You for Your Order!
+                <p className="text-xs font-semibold tracking-widest uppercase text-leaf mb-3">
+                    Order confirmed
+                </p>
+                <h1 className="font-display text-5xl text-ink mb-3 leading-tight">
+                    Bahot bahot dhanyavaad!
                 </h1>
-                <p className="text-slate-600">
-                    Your order has been confirmed and is being prepared for delivery.
+                <p className="text-lg text-ink-mute">
+                    Your order is being prepared with love. Check your inbox in a moment.
                 </p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
-                <div className="flex items-center justify-center gap-3 text-emerald-700 mb-4">
-                    <Package size={24} />
-                    <span className="font-bold">Order Confirmed</span>
+            <div className="bg-cream-soft border border-cream-deep rounded-3xl p-8 mb-6">
+                <div className="flex items-start gap-4 mb-5">
+                    <div className="w-12 h-12 rounded-2xl bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                        <Mail size={22} />
+                    </div>
+                    <div>
+                        <h2 className="font-display text-xl text-ink mb-1">Email on its way</h2>
+                        <p className="text-sm text-ink-mute">
+                            We&apos;ve sent your invoice and tracking link to the email on file.
+                        </p>
+                    </div>
                 </div>
-                <p className="text-sm text-slate-600 mb-4">
-                    We've sent a confirmation email with your invoice and order tracking link.
-                </p>
                 {token && (
                     <Link
-                        href={`/orders/${token}`}
-                        className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium"
+                        href={`/orders/${encodeURIComponent(token)}`}
+                        className="inline-flex items-center gap-2 text-accent font-semibold text-sm hover:gap-3 transition-all"
                     >
-                        Track Your Order
-                        <ArrowRight size={16} />
+                        <Package size={16} />
+                        Track your order
+                        <ArrowRight size={14} />
+                    </Link>
+                )}
+                {orderId && !token && (
+                    <Link
+                        href="/account/orders"
+                        className="inline-flex items-center gap-2 text-accent font-semibold text-sm hover:gap-3 transition-all"
+                    >
+                        <Package size={16} /> View order in your account
+                        <ArrowRight size={14} />
                     </Link>
                 )}
             </div>
 
-            {/* Account Creation Prompt (for guest users) */}
             {token && (
-                <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 mb-8">
-                    <div className="flex items-center justify-center gap-3 text-slate-700 mb-3">
-                        <UserPlus size={24} />
-                        <span className="font-bold">Create an Account</span>
+                <div className="bg-[var(--gajju-teal-deep)] text-cream rounded-3xl p-8 mb-6">
+                    <div className="flex items-start gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-haldi/20 text-haldi flex items-center justify-center shrink-0">
+                            <UserPlus size={22} />
+                        </div>
+                        <div>
+                            <h2 className="font-display text-xl text-cream mb-1">
+                                Make it easier next time
+                            </h2>
+                            <p className="text-sm text-cream/70">
+                                Create a free account to track every order and re-order
+                                favourites in one tap.
+                            </p>
+                        </div>
                     </div>
-                    <p className="text-sm text-slate-600 mb-4">
-                        Track all your orders in one place and re-order your favourites faster.
-                    </p>
                     <Link
-                        href={`/orders/${token}/create-account`}
-                        className="inline-flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-slate-800 transition-colors"
+                        href={`/orders/${encodeURIComponent(token!)}/create-account`}
+                        className="inline-flex items-center gap-2 bg-accent hover:bg-[var(--gajju-terracotta-deep)] text-white px-6 py-3 rounded-full font-semibold text-sm transition-colors"
                     >
-                        Create Account
-                        <ArrowRight size={16} />
+                        Create my account <ArrowRight size={14} />
                     </Link>
-                    <p className="text-xs text-slate-500 mt-3">
-                        This is completely optional. Your order is confirmed regardless.
-                    </p>
                 </div>
             )}
 
-            <Link
-                href="/products"
-                className="inline-flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-emerald-700 transition-colors"
-            >
-                Continue Shopping
-            </Link>
+            <div className="text-center">
+                <Link
+                    href="/products"
+                    className="btn-secondary inline-flex items-center gap-2 px-8 py-3.5"
+                >
+                    Continue shopping
+                </Link>
+            </div>
         </div>
     );
 }

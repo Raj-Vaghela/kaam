@@ -1,344 +1,216 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useCart } from "@/context/CartContext";
-import { createCheckoutSession } from "@/app/actions";
-import { ArrowLeft, CreditCard, Loader2, ShoppingBag, Truck, User, Mail } from "lucide-react";
+import { createPaymentIntent } from "@/app/actions";
+import {
+    ArrowLeft,
+    Loader2,
+    ShoppingBag,
+    Lock,
+} from "lucide-react";
 import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
+import { Elements } from "@stripe/react-stripe-js";
+import { getStripe, stripeAppearance } from "@/lib/stripe-client";
+import CheckoutForm from "@/components/checkout/CheckoutForm";
+import { createClient } from "@/lib/supabase/client";
+import { calculateVAT } from "@/lib/invoice";
+
+const stripePromise = getStripe();
 
 export default function CheckoutPage() {
     const { cart, cartTotal, cartCount } = useCart();
-    const [loading, setLoading] = useState(false);
+
+    const [clientSecret, setClientSecret] = useState<string | null>(null);
+    const [orderId, setOrderId] = useState<string | null>(null);
+    const [guestToken, setGuestToken] = useState<string | null>(null);
+    const [email, setEmail] = useState("");
+    const [emailLocked, setEmailLocked] = useState(false);
     const [error, setError] = useState("");
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [userEmail, setUserEmail] = useState("");
+    const [initializing, setInitializing] = useState(false);
 
-    // Check if user is logged in
+    // Detect logged-in user email
     useEffect(() => {
-        const supabase = createBrowserClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-
+        const supabase = createClient();
         supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user) {
-                setIsLoggedIn(true);
-                setUserEmail(user.email || "");
-                setShippingInfo((prev) => ({ ...prev, email: user.email || "" }));
+            if (user?.email) {
+                setEmail(user.email);
+                setEmailLocked(true);
             }
         });
     }, []);
 
-    // Shipping form state
-    const [shippingInfo, setShippingInfo] = useState({
-        fullName: "",
-        email: "",
-        phone: "",
-        addressLine1: "",
-        addressLine2: "",
-        city: "",
-        postcode: "",
-    });
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setShippingInfo((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleCheckout = async () => {
-        if (!shippingInfo.fullName || !shippingInfo.addressLine1 || !shippingInfo.city || !shippingInfo.postcode) {
-            setError("Please fill in all required shipping fields.");
+    const startCheckout = async () => {
+        if (!email) {
+            setError("Please enter your email to continue.");
             return;
         }
-
-        if (!shippingInfo.email) {
-            setError("Email is required for order confirmation.");
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            setError("Please enter a valid email address.");
             return;
         }
-
-        setLoading(true);
+        setInitializing(true);
         setError("");
-
-        try {
-            const result = await createCheckoutSession(cart, shippingInfo);
-
-            if (!result.success) {
-                throw new Error(result.error || "Failed to create checkout session");
-            }
-
-            // Redirect to Stripe Checkout
-            if (result.url) {
-                window.location.href = result.url;
-            }
-        } catch (err: any) {
-            setError(err.message);
-            setLoading(false);
+        const result = await createPaymentIntent({ cart, email });
+        setInitializing(false);
+        if (!result.success) {
+            setError(result.error || "Could not start checkout");
+            return;
         }
+        setClientSecret(result.clientSecret!);
+        setOrderId(result.orderId!);
+        setGuestToken(result.guestToken || null);
     };
 
-    // Calculate VAT (20%)
-    const vatAmount = cartTotal * 0.2;
-    const totalWithVat = cartTotal + vatAmount;
+    const freeDeliveryThreshold = 40;
+    const deliveryFee = cartTotal >= freeDeliveryThreshold ? 0 : 3.99;
+    const { vatAmount, total: totalWithVat } = calculateVAT(cartTotal + deliveryFee);
 
     if (cart.length === 0) {
         return (
-            <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-                <ShoppingBag size={64} className="mx-auto text-slate-300 mb-6" />
-                <h1 className="text-2xl font-bold text-slate-900 mb-2">Your cart is empty</h1>
-                <p className="text-slate-500 mb-6">Add some items to your cart to checkout.</p>
-                <Link
-                    href="/products"
-                    className="inline-flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-emerald-700 transition-colors"
-                >
-                    Browse Products
+            <div className="max-w-2xl mx-auto px-4 py-24 text-center">
+                <ShoppingBag size={56} className="mx-auto text-cream-deep mb-6" strokeWidth={1.4} />
+                <h1 className="font-display text-4xl text-ink mb-3">Your basket is empty</h1>
+                <p className="text-ink-mute mb-8">Add a few treats first.</p>
+                <Link href="/products" className="btn-primary inline-block px-8 py-3.5">
+                    Browse the Pantry
                 </Link>
             </div>
         );
     }
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <Link
                 href="/"
-                className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 text-sm font-medium mb-8"
+                className="inline-flex items-center gap-2 text-sm text-ink-mute hover:text-accent mb-8 font-medium transition-colors"
             >
-                <ArrowLeft size={16} />
-                Continue Shopping
+                <ArrowLeft size={16} /> Continue shopping
             </Link>
 
-            <h1 className="text-3xl font-serif font-bold text-slate-900 mb-8">Checkout</h1>
+            <div className="mb-10">
+                <p className="text-xs font-semibold tracking-widest uppercase text-accent mb-2">
+                    Step 1 of 1
+                </p>
+                <h1 className="font-display text-5xl text-ink">Checkout</h1>
+            </div>
 
-            <div className="grid lg:grid-cols-2 gap-8">
+            <div className="grid lg:grid-cols-5 gap-10">
                 {/* Left: Form */}
-                <div className="space-y-6">
-                    {/* Guest vs Login Option */}
-                    {!isLoggedIn && (
-                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="font-medium text-slate-900">Have an account?</p>
-                                    <p className="text-sm text-slate-500">Sign in for faster checkout</p>
+                <div className="lg:col-span-3 space-y-6">
+                    {!clientSecret ? (
+                        <div className="bg-cream-soft border border-cream-deep rounded-3xl p-8">
+                            <h2 className="font-display text-2xl text-ink mb-2">
+                                Where should we send your receipt?
+                            </h2>
+                            <p className="text-sm text-ink-mute mb-6">
+                                We&apos;ll send your order confirmation, invoice, and tracking link
+                                here.
+                            </p>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={emailLocked}
+                                placeholder="you@example.com"
+                                className="w-full px-5 py-4 rounded-2xl border border-cream-deep bg-white focus:outline-none focus:border-accent text-base disabled:bg-cream disabled:text-ink-mute"
+                            />
+                            {error && (
+                                <div className="mt-4 bg-red-50 border border-red-100 text-rose px-4 py-3 rounded-xl text-sm">
+                                    {error}
                                 </div>
-                                <Link
-                                    href="/auth?redirect=/checkout"
-                                    className="px-4 py-2 text-sm font-medium text-emerald-700 border border-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors"
-                                >
-                                    Sign In
-                                </Link>
-                            </div>
+                            )}
+                            <button
+                                onClick={startCheckout}
+                                disabled={initializing}
+                                className="btn-primary w-full mt-6 py-4 text-base flex items-center justify-center gap-2"
+                            >
+                                {initializing && <Loader2 className="animate-spin" size={18} />}
+                                Continue to Payment
+                            </button>
                         </div>
+                    ) : (
+                        <Elements
+                            stripe={stripePromise}
+                            options={{
+                                clientSecret,
+                                appearance: stripeAppearance,
+                                loader: "auto",
+                            }}
+                        >
+                            <CheckoutForm
+                                orderId={orderId!}
+                                guestToken={guestToken}
+                                email={email}
+                                amount={totalWithVat}
+                            />
+                        </Elements>
                     )}
-
-                    {/* Contact Info */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                            <Mail size={20} className="text-emerald-600" />
-                            Contact Information
-                        </h2>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                    Email Address *
-                                </label>
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={shippingInfo.email}
-                                    onChange={handleInputChange}
-                                    required
-                                    disabled={isLoggedIn}
-                                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-600"
-                                    placeholder="you@example.com"
-                                />
-                                <p className="text-xs text-slate-500 mt-1">
-                                    We'll send your order confirmation and invoice here
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Shipping Info */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                            <Truck size={20} className="text-emerald-600" />
-                            Delivery Address
-                        </h2>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                    Full Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="fullName"
-                                    value={shippingInfo.fullName}
-                                    onChange={handleInputChange}
-                                    required
-                                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                    placeholder="John Doe"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                    Phone Number
-                                </label>
-                                <input
-                                    type="tel"
-                                    name="phone"
-                                    value={shippingInfo.phone}
-                                    onChange={handleInputChange}
-                                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                    placeholder="+44 7123 456789"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                    Address Line 1 *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="addressLine1"
-                                    value={shippingInfo.addressLine1}
-                                    onChange={handleInputChange}
-                                    required
-                                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                    placeholder="123 High Street"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">
-                                    Address Line 2
-                                </label>
-                                <input
-                                    type="text"
-                                    name="addressLine2"
-                                    value={shippingInfo.addressLine2}
-                                    onChange={handleInputChange}
-                                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                    placeholder="Flat 2"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        City *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="city"
-                                        value={shippingInfo.city}
-                                        onChange={handleInputChange}
-                                        required
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                        placeholder="London"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        Postcode *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="postcode"
-                                        value={shippingInfo.postcode}
-                                        onChange={handleInputChange}
-                                        required
-                                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                        placeholder="SW1A 1AA"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
-                {/* Right: Order Summary */}
-                <div className="space-y-6">
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sticky top-4">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4">
-                            Order Summary ({cartCount} items)
+                {/* Right: Summary */}
+                <aside className="lg:col-span-2">
+                    <div className="bg-cream-soft border border-cream-deep rounded-3xl p-6 sticky top-28">
+                        <h2 className="font-display text-2xl text-ink mb-5">
+                            Order summary
                         </h2>
 
-                        <div className="space-y-4 max-h-60 overflow-y-auto">
+                        <div className="space-y-4 max-h-72 overflow-y-auto pr-2 mb-5">
                             {cart.map((item) => (
-                                <div key={item.id} className="flex gap-4">
-                                    <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
-                                        <img
+                                <div key={item.id} className="flex gap-3">
+                                    <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-white shrink-0">
+                                        <Image
                                             src={item.image}
                                             alt={item.name}
-                                            className="w-full h-full object-cover"
+                                            fill
+                                            className="object-cover"
                                         />
+                                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--gajju-teal-deep)] text-cream text-[10px] font-bold flex items-center justify-center">
+                                            {item.qty}
+                                        </span>
                                     </div>
                                     <div className="flex-grow min-w-0">
-                                        <h3 className="text-sm font-medium text-slate-900 truncate">
+                                        <p className="text-sm font-medium text-ink line-clamp-1">
                                             {item.name}
-                                        </h3>
-                                        <p className="text-xs text-slate-500">
-                                            Qty: {item.qty} × £{item.price.toFixed(2)}
                                         </p>
+                                        <p className="text-xs text-ink-mute">{item.unit}</p>
                                     </div>
-                                    <div className="text-sm font-bold text-slate-900">
+                                    <p className="text-sm font-semibold text-ink">
                                         £{(item.price * item.qty).toFixed(2)}
-                                    </div>
+                                    </p>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="border-t border-slate-200 mt-4 pt-4 space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">Subtotal</span>
-                                <span className="font-medium">£{cartTotal.toFixed(2)}</span>
+                        <div className="border-t border-cream-deep pt-4 space-y-2 text-sm">
+                            <div className="flex justify-between text-ink-soft">
+                                <span>Subtotal ({cartCount} items)</span>
+                                <span>£{cartTotal.toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">VAT (20%)</span>
-                                <span className="font-medium">£{vatAmount.toFixed(2)}</span>
+                            <div className="flex justify-between text-ink-soft">
+                                <span>VAT (20%)</span>
+                                <span>£{vatAmount.toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">Delivery</span>
-                                <span className="font-medium text-emerald-600">FREE</span>
+                            <div className="flex justify-between text-ink-soft">
+                                <span>Delivery</span>
+                                {deliveryFee === 0 ? (
+                                    <span className="text-leaf font-semibold">FREE</span>
+                                ) : (
+                                    <span>£{deliveryFee.toFixed(2)}</span>
+                                )}
                             </div>
-                            <div className="flex justify-between text-lg font-bold pt-2 border-t border-slate-200">
+                            <div className="flex justify-between font-display text-2xl text-ink pt-3 border-t border-cream-deep">
                                 <span>Total</span>
-                                <span className="text-emerald-700">£{totalWithVat.toFixed(2)}</span>
+                                <span>£{totalWithVat.toFixed(2)}</span>
                             </div>
                         </div>
 
-                        {error && (
-                            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                                {error}
-                            </div>
-                        )}
-
-                        <button
-                            onClick={handleCheckout}
-                            disabled={loading}
-                            className="mt-6 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="animate-spin" size={20} />
-                                    Processing...
-                                </>
-                            ) : (
-                                <>
-                                    <CreditCard size={20} />
-                                    Pay £{totalWithVat.toFixed(2)}
-                                </>
-                            )}
-                        </button>
-
-                        <p className="mt-4 text-xs text-center text-slate-500">
-                            Secure payment powered by Stripe. Your card details are never stored.
+                        <p className="mt-5 text-xs text-ink-mute flex items-center gap-1.5 justify-center">
+                            <Lock size={11} /> Secured by Stripe · Cards never stored
                         </p>
                     </div>
-                </div>
+                </aside>
             </div>
         </div>
     );
