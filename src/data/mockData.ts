@@ -14,6 +14,7 @@ export const MOCK_PRODUCTS: Product[] = [
         rating: 4.8,
         bestseller: true,
         clubPrice: 10.0,
+        stock: 50,
     },
     {
         id: "prod_2",
@@ -27,6 +28,7 @@ export const MOCK_PRODUCTS: Product[] = [
         rating: 4.9,
         bestseller: true,
         clubPrice: 4.0,
+        stock: 80,
     },
     {
         id: "prod_3",
@@ -40,6 +42,7 @@ export const MOCK_PRODUCTS: Product[] = [
         rating: 4.7,
         bestseller: false,
         clubPrice: null,
+        stock: 35,
     },
     {
         id: "prod_4",
@@ -53,6 +56,7 @@ export const MOCK_PRODUCTS: Product[] = [
         rating: 4.6,
         bestseller: true,
         clubPrice: 2.0,
+        stock: 120,
     },
     {
         id: "prod_5",
@@ -66,6 +70,7 @@ export const MOCK_PRODUCTS: Product[] = [
         rating: 4.9,
         bestseller: true,
         clubPrice: null,
+        stock: 200,
     },
     {
         id: "prod_6",
@@ -79,6 +84,7 @@ export const MOCK_PRODUCTS: Product[] = [
         rating: 4.8,
         bestseller: false,
         clubPrice: 6.5,
+        stock: 45,
     },
     {
         id: "prod_7",
@@ -92,6 +98,7 @@ export const MOCK_PRODUCTS: Product[] = [
         rating: 4.5,
         bestseller: false,
         clubPrice: 0.8,
+        stock: 300,
     },
     {
         id: "prod_8",
@@ -105,6 +112,7 @@ export const MOCK_PRODUCTS: Product[] = [
         rating: 4.4,
         bestseller: false,
         clubPrice: null,
+        stock: 90,
     },
 ];
 

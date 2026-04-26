@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useCart } from "@/context/CartContext";
-import { createPaymentIntent } from "@/app/actions";
+import { createPaymentIntent, validatePromoCode } from "@/app/actions";
 import {
     ArrowLeft,
     Loader2,
@@ -30,6 +30,10 @@ export default function CheckoutPage() {
     const [error, setError] = useState("");
     const [initializing, setInitializing] = useState(false);
 
+    const [promoCode, setPromoCode] = useState('');
+    const [promoResult, setPromoResult] = useState<{ valid: boolean; description?: string; discountAmount?: number; error?: string } | null>(null);
+    const [validatingPromo, setValidatingPromo] = useState(false);
+
     // Detect logged-in user email
     useEffect(() => {
         const supabase = createClient();
@@ -40,6 +44,14 @@ export default function CheckoutPage() {
             }
         });
     }, []);
+
+    const applyPromo = async () => {
+        if (!promoCode.trim()) return;
+        setValidatingPromo(true);
+        const result = await validatePromoCode(promoCode, cartTotal);
+        setPromoResult(result);
+        setValidatingPromo(false);
+    };
 
     const startCheckout = async () => {
         if (!email) {
@@ -52,7 +64,7 @@ export default function CheckoutPage() {
         }
         setInitializing(true);
         setError("");
-        const result = await createPaymentIntent({ cart, email });
+        const result = await createPaymentIntent({ cart, email, promoCode: promoResult?.valid ? promoCode : undefined });
         setInitializing(false);
         if (!result.success) {
             setError(result.error || "Could not start checkout");
@@ -65,7 +77,9 @@ export default function CheckoutPage() {
 
     const freeDeliveryThreshold = 40;
     const deliveryFee = cartTotal >= freeDeliveryThreshold ? 0 : 3.99;
-    const { vatAmount, total: totalWithVat } = calculateVAT(cartTotal + deliveryFee);
+    const appliedDiscount = promoResult?.valid ? (promoResult.discountAmount ?? 0) : 0;
+    const discountedSubtotal = cartTotal - appliedDiscount;
+    const { vatAmount, total: totalWithVat } = calculateVAT(discountedSubtotal + deliveryFee);
 
     if (cart.length === 0) {
         return (
@@ -116,6 +130,29 @@ export default function CheckoutPage() {
                                 placeholder="you@example.com"
                                 className="w-full px-5 py-4 rounded-2xl border border-cream-deep bg-white focus:outline-none focus:border-accent text-base disabled:bg-cream disabled:text-ink-mute"
                             />
+                            <div className="mt-4">
+                                <label className="block text-xs font-semibold text-ink-soft uppercase tracking-wider mb-2">
+                                    Promo code (optional)
+                                </label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={promoCode}
+                                        onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoResult(null); }}
+                                        placeholder="e.g. WELCOME10"
+                                        className="flex-grow px-4 py-3 rounded-2xl border border-cream-deep bg-white focus:outline-none focus:border-accent text-sm uppercase"
+                                    />
+                                    <button onClick={applyPromo} disabled={validatingPromo || !promoCode} className="btn-secondary px-5 py-3 text-sm">
+                                        {validatingPromo ? <Loader2 className="animate-spin" size={16} /> : 'Apply'}
+                                    </button>
+                                </div>
+                                {promoResult?.valid && (
+                                    <p className="mt-2 text-sm text-leaf font-semibold">&#10003; {promoResult.description} &mdash; saving £{promoResult.discountAmount?.toFixed(2)}</p>
+                                )}
+                                {promoResult && !promoResult.valid && (
+                                    <p className="mt-2 text-sm text-rose">{promoResult.error}</p>
+                                )}
+                            </div>
                             {error && (
                                 <div className="mt-4 bg-red-50 border border-red-100 text-rose px-4 py-3 rounded-xl text-sm">
                                     {error}
@@ -188,6 +225,12 @@ export default function CheckoutPage() {
                                 <span>Subtotal ({cartCount} items)</span>
                                 <span>£{cartTotal.toFixed(2)}</span>
                             </div>
+                            {promoResult?.valid && promoResult.discountAmount && (
+                                <div className="flex justify-between text-leaf font-semibold">
+                                    <span>Discount ({promoCode})</span>
+                                    <span>-£{promoResult.discountAmount.toFixed(2)}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between text-ink-soft">
                                 <span>VAT (20%)</span>
                                 <span>£{vatAmount.toFixed(2)}</span>

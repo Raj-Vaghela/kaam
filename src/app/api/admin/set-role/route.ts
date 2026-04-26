@@ -20,7 +20,7 @@ const RPC_ERROR_TO_PARAM: Record<string, string> = {
 
 export async function POST(request: NextRequest) {
     const ip = getClientIp(request);
-    const ipLimit = rateLimit(`set-role:ip:${ip}`, ROLE_CHANGE_IP_LIMIT, ROLE_CHANGE_WINDOW_MS);
+    const ipLimit = await rateLimit(`set-role:ip:${ip}`, ROLE_CHANGE_IP_LIMIT, ROLE_CHANGE_WINDOW_MS);
     if (!ipLimit.allowed) {
         return NextResponse.redirect(new URL("/admin/users?error=rate_limited", request.url));
     }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.redirect(new URL("/admin/auth", request.url));
     }
 
-    const userLimit = rateLimit(
+    const userLimit = await rateLimit(
         `set-role:user:${user.id}`,
         ROLE_CHANGE_USER_LIMIT,
         ROLE_CHANGE_WINDOW_MS

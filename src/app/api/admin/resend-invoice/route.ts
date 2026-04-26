@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Rate limit: 3 resends per invoice per hour
-        const rl = rateLimit(`resend:${invoiceId}`, 3, 60 * 60 * 1000);
+        const rl = await rateLimit(`resend:${invoiceId}`, 3, 60 * 60 * 1000);
         if (!rl.allowed) {
             return NextResponse.redirect(new URL("/admin/invoices?error=rate_limited", request.url));
         }

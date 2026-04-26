@@ -83,12 +83,12 @@ export default function HeroSection() {
                     {/* Floating badge */}
                     <div className="absolute top-[58%] right-[6%] bg-cream-soft border border-cream-deep rounded-full px-5 py-3 shadow-[var(--shadow-soft)] hidden sm:block">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-haldi-soft flex items-center justify-center">
-                                <span className="text-xl">⭐</span>
+                            <div className="w-10 h-10 rounded-full bg-leaf/10 flex items-center justify-center">
+                                <span className="text-xl">✓</span>
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-ink">4.9/5 rating</p>
-                                <p className="text-[11px] text-ink-mute">2,400+ reviews</p>
+                                <p className="text-sm font-semibold text-ink">Trusted by families</p>
+                                <p className="text-[11px] text-ink-mute">across the UK</p>
                             </div>
                         </div>
                     </div>

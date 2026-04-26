@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { User, Package, MapPin, LogOut, Download, Trash2 } from "lucide-react";
+import { User, Package, MapPin, LogOut, Download, Trash2, Heart } from "lucide-react";
 
 export default async function AccountPage() {
     const supabase = await createClient();
@@ -38,6 +38,9 @@ export default async function AccountPage() {
                     </Link>
                     <Link href="/account/orders" className="flex items-center gap-3 px-4 py-3 rounded-2xl text-ink-soft hover:bg-cream-soft transition-colors">
                         <Package size={18} /> Orders
+                    </Link>
+                    <Link href="/account/wishlist" className="flex items-center gap-3 px-4 py-3 rounded-2xl text-ink-soft hover:bg-cream-soft transition-colors">
+                        <Heart size={18} /> Wishlist
                     </Link>
                     <Link href="/auth/signout" className="flex items-center gap-3 px-4 py-3 rounded-2xl text-rose hover:bg-cream-soft transition-colors">
                         <LogOut size={18} /> Sign Out

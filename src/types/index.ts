@@ -9,6 +9,7 @@ export interface Product {
     rating: number;
     bestseller: boolean;
     clubPrice: number | null;
+    stock: number;
 }
 
 export interface CartItem {
@@ -42,6 +43,7 @@ interface DbProductRow {
     rating: number | null;
     bestseller: boolean | null;
     club_price: string | number | null;
+    stock: number | null;
 }
 
 /** Maps a raw Supabase product row to the typed frontend Product shape. */
@@ -57,5 +59,6 @@ export function toProduct(row: DbProductRow): Product {
         rating: row.rating || 0,
         bestseller: row.bestseller || false,
         clubPrice: row.club_price != null ? Number(row.club_price) : null,
+        stock: row.stock ?? 0,
     };
 }

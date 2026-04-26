@@ -164,17 +164,58 @@ export async function deleteProduct(productId: string) {
 }
 
 // =============================================
+// PROMO CODE VALIDATION
+// =============================================
+export async function validatePromoCode(code: string, subtotal: number): Promise<{
+    valid: boolean;
+    error?: string;
+    discountType?: 'percent' | 'fixed';
+    discountValue?: number;
+    discountAmount?: number;
+    description?: string;
+}> {
+    if (!code?.trim()) return { valid: false, error: 'No code entered' };
+    const upperCode = code.trim().toUpperCase();
+
+    const supabase = await createClient();
+    const { data: promo } = await supabase
+        .from('promo_codes')
+        .select('*')
+        .eq('code', upperCode)
+        .eq('active', true)
+        .single();
+
+    if (!promo) return { valid: false, error: 'Invalid or expired promo code' };
+    if (promo.expires_at && new Date(promo.expires_at) < new Date()) return { valid: false, error: 'This code has expired' };
+    if (promo.max_uses !== null && promo.uses_count >= promo.max_uses) return { valid: false, error: 'This code has reached its usage limit' };
+    if (subtotal < promo.min_order_value) return { valid: false, error: `Minimum order of £${promo.min_order_value.toFixed(2)} required for this code` };
+
+    const discountAmount = promo.discount_type === 'percent'
+        ? Math.min(subtotal * (promo.discount_value / 100), subtotal)
+        : Math.min(promo.discount_value, subtotal);
+
+    return {
+        valid: true,
+        discountType: promo.discount_type,
+        discountValue: promo.discount_value,
+        discountAmount,
+        description: promo.description,
+    };
+}
+
+// =============================================
 // CHECKOUT — PaymentIntent based (modern Elements)
 // =============================================
 interface CreatePaymentIntentArgs {
     cart: CartItem[];
     email: string;
+    promoCode?: string;
 }
 
-export async function createPaymentIntent({ cart, email }: CreatePaymentIntentArgs) {
+export async function createPaymentIntent({ cart, email, promoCode }: CreatePaymentIntentArgs) {
     // Rate limit: 5 payment intents per email per 10 minutes
     const { rateLimit } = await import("@/lib/security/rate-limit");
-    const rl = rateLimit(`payment:${email}`, 5, 10 * 60 * 1000);
+    const rl = await rateLimit(`payment:${email}`, 5, 10 * 60 * 1000);
     if (!rl.allowed) {
         return { success: false, error: "Too many checkout attempts. Please wait a few minutes." };
     }
@@ -221,7 +262,20 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
     }
     const freeDeliveryThreshold = 40;
     const deliveryFee = subtotal >= freeDeliveryThreshold ? 0 : 3.99;
-    const { vatAmount, total } = calculateVAT(subtotal + deliveryFee);
+
+    let discountAmount = 0;
+    let appliedPromoCode: string | null = null;
+    if (promoCode) {
+        const promoResult = await validatePromoCode(promoCode, subtotal);
+        if (promoResult.valid && promoResult.discountAmount) {
+            discountAmount = promoResult.discountAmount;
+            appliedPromoCode = promoCode.trim().toUpperCase();
+        }
+        // Silently ignore invalid codes — the UI validates first
+    }
+    const discountedSubtotal = subtotal - discountAmount;
+
+    const { vatAmount, total } = calculateVAT(discountedSubtotal + deliveryFee);
     const amountInPence = Math.round(total * 100);
 
     const guestToken = user ? null : crypto.randomUUID();
@@ -237,6 +291,8 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
             total,
             shipping_address: {},
             billing_address: {},
+            discount_amount: discountAmount > 0 ? discountAmount : null,
+            promo_code: appliedPromoCode,
         })
         .select()
         .single();
@@ -271,6 +327,8 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
                 guest_token: guestToken || "",
                 subtotal: subtotal.toFixed(2),
                 vat: vatAmount.toFixed(2),
+                discount: discountAmount > 0 ? discountAmount.toFixed(2) : "0",
+                promo_code: appliedPromoCode || "",
             },
             description: `GajjuExpress order ${order.id.slice(0, 8).toUpperCase()}`,
         });
@@ -280,6 +338,10 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
             .update({ stripe_session_id: paymentIntent.id })
             .eq("id", order.id);
 
+        if (appliedPromoCode) {
+            await supabase.rpc('increment_promo_code_uses', { p_code: appliedPromoCode });
+        }
+
         return {
             success: true,
             clientSecret: paymentIntent.client_secret,
@@ -288,6 +350,7 @@ export async function createPaymentIntent({ cart, email }: CreatePaymentIntentAr
             amount: total,
             subtotal,
             vatAmount,
+            discountAmount,
         };
     } catch (err: unknown) {
         await supabase.from("order_items").delete().eq("order_id", order.id);

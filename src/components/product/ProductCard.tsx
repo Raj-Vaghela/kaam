@@ -1,10 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { Star, Plus, Check } from "lucide-react";
+import Link from "next/link";
+import { Star, Plus, Check, Heart } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
+import { toggleWishlist, isWishlisted } from "@/app/actions/wishlist-actions";
 
 interface ProductCardProps {
     product: Product;
@@ -13,13 +15,15 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
     const { addToCart } = useCart();
     const [added, setAdded] = useState(false);
+    const [wishlisted, setWishlisted] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
+        isWishlisted(product.id).then(setWishlisted).catch(() => {});
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
         };
-    }, []);
+    }, [product.id]);
 
     const finalPrice = product.clubPrice ?? product.price;
 
@@ -30,8 +34,18 @@ export default function ProductCard({ product }: ProductCardProps) {
         timerRef.current = setTimeout(() => setAdded(false), 1400);
     };
 
+    const handleWishlist = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const result = await toggleWishlist(product.id);
+        setWishlisted(result.wishlisted);
+    };
+
     return (
-        <div className="group bg-cream-soft border border-cream-deep rounded-3xl overflow-hidden flex flex-col hover:shadow-[var(--shadow-lift)] hover:-translate-y-1 transition-all duration-300">
+        <Link
+            href={`/products/${product.id}`}
+            className="group bg-cream-soft border border-cream-deep rounded-3xl overflow-hidden flex flex-col hover:shadow-[var(--shadow-lift)] hover:-translate-y-1 transition-all duration-300"
+        >
             {/* Image */}
             <div className="relative aspect-square bg-white overflow-hidden">
                 <Image
@@ -52,9 +66,27 @@ export default function ProductCard({ product }: ProductCardProps) {
                         </span>
                     )}
                 </div>
+
+                {/* Wishlist heart button */}
+                <button
+                    onClick={handleWishlist}
+                    aria-label={wishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+                    className={`absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center shadow-[var(--shadow-bloom)] transition-all duration-300 bg-white/90 backdrop-blur-sm opacity-0 group-hover:opacity-100 ${wishlisted ? "text-rose-500 opacity-100" : "text-ink-mute hover:text-rose-500"}`}
+                >
+                    <Heart
+                        size={17}
+                        fill={wishlisted ? "currentColor" : "none"}
+                        strokeWidth={2}
+                    />
+                </button>
+
                 {/* Quick add button */}
                 <button
-                    onClick={handleAdd}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleAdd();
+                    }}
                     aria-label={`Add ${product.name}`}
                     className={`absolute bottom-3 right-3 w-11 h-11 rounded-full flex items-center justify-center shadow-[var(--shadow-bloom)] transition-all duration-300 ${added
                             ? "bg-leaf text-white scale-110"
@@ -94,6 +126,6 @@ export default function ProductCard({ product }: ProductCardProps) {
                     )}
                 </div>
             </div>
-        </div>
+        </Link>
     );
 }
