@@ -197,7 +197,7 @@ export default async function AdminOrderDetailPage({
                         <h2 className="font-semibold text-ink text-sm uppercase tracking-wide mb-4">
                             Update Status
                         </h2>
-                        <form action={async (fd) => { await updateOrderStatus(fd); }} className="flex items-center gap-3">
+                        <form action={updateOrderStatus} className="flex items-center gap-3">
                             <input type="hidden" name="orderId" value={order.id} />
                             <select
                                 name="status"
@@ -225,7 +225,7 @@ export default async function AdminOrderDetailPage({
                             <Truck size={16} className="text-accent" />
                             <h2 className="font-semibold text-ink text-sm uppercase tracking-wide">Tracking</h2>
                         </div>
-                        <form action={async (fd) => { await updateOrderTracking(fd); }} className="space-y-3">
+                        <form action={updateOrderTracking} className="space-y-3">
                             <input type="hidden" name="orderId" value={order.id} />
                             <div>
                                 <label className="block text-xs font-semibold text-ink-mute uppercase tracking-wide mb-1.5">
@@ -299,7 +299,7 @@ export default async function AdminOrderDetailPage({
 
                             {returnRequest.status === "pending" && (
                                 <div className="flex items-center gap-3">
-                                    <form action={async (fd) => { await processRefund(fd); }}>
+                                    <form action={processRefund}>
                                         <input type="hidden" name="returnRequestId" value={returnRequest.id} />
                                         <input type="hidden" name="orderId" value={order.id} />
                                         <button
@@ -309,7 +309,7 @@ export default async function AdminOrderDetailPage({
                                             Approve &amp; Refund
                                         </button>
                                     </form>
-                                    <form action={async (fd) => { await rejectReturn(fd); }}>
+                                    <form action={rejectReturn}>
                                         <input type="hidden" name="returnRequestId" value={returnRequest.id} />
                                         <input type="hidden" name="orderId" value={order.id} />
                                         <button
