@@ -213,6 +213,16 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
         .eq("id", orderId);
     if (updateError) console.error("Failed to update order status:", updateError);
 
+    // Decrement stock for each item in the order
+    for (const item of order.order_items) {
+        if (!item.product_id) continue;
+        const { error: stockError } = await supabase.rpc("decrement_stock", {
+            p_product_id: item.product_id,
+            p_quantity: item.quantity,
+        });
+        if (stockError) console.error(`Failed to decrement stock for product ${item.product_id}:`, stockError);
+    }
+
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const trackingUrl = guestToken
         ? `${baseUrl}/orders/${guestToken}`
