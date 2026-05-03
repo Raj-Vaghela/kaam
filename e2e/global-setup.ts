@@ -50,10 +50,11 @@ async function globalSetup() {
   }
   console.log(`${TEST_PRODUCTS.length} test products seeded`)
 
-  // 3. Seed a test order for admin order tests
+  // 3. Seed a test order for admin order tests (delete-first for idempotency)
   const { data: firstProduct } = await db.from('products').select('id, name, price').limit(1).single()
   if (firstProduct) {
-    await db.from('orders').upsert({
+    await db.from('orders').delete().eq('guest_email', 'seed-order@test.gajjuexpress')
+    await db.from('orders').insert({
       guest_email: 'seed-order@test.gajjuexpress',
       status: 'pending',
       total: firstProduct.price,
@@ -64,8 +65,8 @@ async function globalSetup() {
         postcode: 'E1 1AA',
         phone: '07700900000',
       },
-    }, { onConflict: 'guest_email' })
-    console.log('Seed order created')
+    })
+    console.log('✓ Seed order created')
   }
 }
 
