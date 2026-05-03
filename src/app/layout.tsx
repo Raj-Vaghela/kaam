@@ -5,6 +5,7 @@ import { CartProvider } from "@/context/CartContext";
 import ClientShell from "@/components/layout/ClientShell";
 import CookieConsent from "@/components/gdpr/CookieConsent";
 import { BRAND } from "@/lib/brand";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
     variable: "--font-inter",
@@ -103,6 +104,7 @@ export default function RootLayout({
                     <ClientShell>{children}</ClientShell>
                     <CookieConsent />
                 </CartProvider>
+                <Analytics />
             </body>
         </html>
     );

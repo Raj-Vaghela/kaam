@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { BRAND } from "@/lib/brand";
@@ -13,7 +14,7 @@ export default function Error({
     reset: () => void;
 }) {
     useEffect(() => {
-        console.error(error);
+        Sentry.captureException(error);
     }, [error]);
 
     return (

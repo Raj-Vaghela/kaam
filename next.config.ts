@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const securityHeaders = [
     { key: "X-Frame-Options", value: "DENY" },
@@ -21,7 +22,7 @@ const securityHeaders = [
             "font-src 'self' https://fonts.gstatic.com",
             "img-src 'self' data: blob: https://*.supabase.co https://placehold.co https://*.stripe.com https://images.unsplash.com",
             "frame-src https://js.stripe.com https://hooks.stripe.com",
-            "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com",
+            "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://o*.ingest.sentry.io",
             "object-src 'none'",
             "base-uri 'self'",
             "form-action 'self'",
@@ -47,4 +48,8 @@ const nextConfig: NextConfig = {
     },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+    silent: true,
+    disableLogger: true,
+    tunnelRoute: "/monitoring",
+});
