@@ -6,7 +6,7 @@ vi.mock('next/cache', () => ({
 }))
 
 vi.mock('next/headers', () => ({
-  cookies: vi.fn().mockReturnValue({
+  cookies: vi.fn().mockResolvedValue({
     get: vi.fn(),
     set: vi.fn(),
     delete: vi.fn(),
@@ -19,6 +19,7 @@ vi.mock('next/navigation', () => ({
     push: vi.fn(),
     replace: vi.fn(),
     back: vi.fn(),
+    refresh: vi.fn(),
   }),
   usePathname: vi.fn().mockReturnValue('/'),
   useSearchParams: vi.fn().mockReturnValue(new URLSearchParams()),
