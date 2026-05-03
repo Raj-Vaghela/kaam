@@ -42,10 +42,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const domain = process.env.RESEND_DOMAIN ?? "gajjuexpress.co.uk";
-
         await resend.emails.send({
-            from: `GajjuExpress <hello@${domain}>`,
+            from: `GajjuExpress <onboarding@resend.dev>`,
             to: normalised,
             subject: "Welcome to GajjuExpress — here's your £10 off",
             html: `
@@ -56,7 +54,7 @@ export async function POST(req: NextRequest) {
   <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;padding:48px 40px;border:1px solid #e8e0d0;">
 
     <div style="text-align:center;margin-bottom:32px;">
-      <img src="https://${domain}/gajjuexpress-logo-h.png" alt="GajjuExpress" width="180" height="48"
+      <img src="https://gajjuexpress.co.uk/gajjuexpress-logo-h.png" alt="GajjuExpress" width="180" height="48"
            style="max-width:180px;height:auto;display:block;margin:0 auto 16px;" />
       <p style="font-size:15px;color:#c8860a;margin:0;font-style:italic;">Ghar jaisi cheezein, ek click pe.</p>
     </div>
@@ -77,7 +75,7 @@ export async function POST(req: NextRequest) {
     </p>
 
     <div style="text-align:center;margin:32px 0;">
-      <a href="https://${domain}/products"
+      <a href="https://gajjuexpress.co.uk/products"
          style="display:inline-block;background:#e0582a;color:#ffffff;text-decoration:none;padding:16px 32px;border-radius:999px;font-size:15px;font-weight:600;font-family:sans-serif;">
         Shop the Pantry →
       </a>
@@ -87,8 +85,8 @@ export async function POST(req: NextRequest) {
 
     <p style="font-size:12px;color:#9a8e82;line-height:1.7;margin:0;font-family:sans-serif;text-align:center;">
       GajjuExpress Ltd · 47 Wembley High Road, Unit B, London HA9 7QU<br />
-      You're receiving this because you signed up at ${domain}.<br />
-      Questions? <a href="mailto:hello@${domain}" style="color:#1f5f6b;">hello@${domain}</a>
+      You're receiving this because you signed up at gajjuexpress.co.uk.<br />
+      Questions? <a href="mailto:hello@gajjuexpress.co.uk" style="color:#1f5f6b;">hello@gajjuexpress.co.uk</a>
     </p>
   </div>
 </body>

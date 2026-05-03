@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import TrolleyDrawer from "@/components/layout/TrolleyDrawer";
@@ -27,11 +28,13 @@ export default function ClientShell({ children }: { children: React.ReactNode })
     return (
         <div className="min-h-screen flex flex-col bg-cream text-ink">
             {!isSpecialLayout && (
-                <Header
-                    cartCount={cartCount}
-                    cartTotal={cartTotal}
-                    onCartClick={() => setCartOpen(true)}
-                />
+                <Suspense fallback={null}>
+                    <Header
+                        cartCount={cartCount}
+                        cartTotal={cartTotal}
+                        onCartClick={() => setCartOpen(true)}
+                    />
+                </Suspense>
             )}
             <main className="flex-grow">{children}</main>
             {!isSpecialLayout && <Footer />}

@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import Stripe from "stripe";
 
-// Lazy Stripe init — mirrors the pattern in src/app/actions.ts
 let _stripe: Stripe | null = null;
 function getStripe(): Stripe {
     if (!_stripe) {
@@ -49,22 +48,21 @@ async function getAdminUser() {
     return { supabase, user, authorized };
 }
 
-export async function updateOrderStatus(formData: FormData) {
+export async function updateOrderStatus(formData: FormData): Promise<void> {
     const { supabase, authorized } = await getAdminUser();
-    if (!authorized) return { success: false, message: "Unauthorized" };
+    if (!authorized) return;
 
     const orderId = formData.get("orderId") as string;
     const newStatus = formData.get("status") as string;
 
-    if (!orderId) return { success: false, message: "Missing order ID" };
-    if (!isValidStatus(newStatus)) return { success: false, message: "Invalid status value" };
+    if (!orderId || !isValidStatus(newStatus)) return;
 
     const { error } = await supabase
         .from("orders")
         .update({ status: newStatus })
         .eq("id", orderId);
 
-    if (error) return { success: false, message: error.message };
+    if (error) return;
 
     const { logAdminAction } = await import("@/lib/audit");
     await logAdminAction(supabase, {
@@ -76,26 +74,24 @@ export async function updateOrderStatus(formData: FormData) {
 
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${orderId}`);
-
-    return { success: true };
 }
 
-export async function updateOrderTracking(formData: FormData) {
+export async function updateOrderTracking(formData: FormData): Promise<void> {
     const { supabase, authorized } = await getAdminUser();
-    if (!authorized) return { success: false, message: "Unauthorized" };
+    if (!authorized) return;
 
     const orderId = formData.get("orderId") as string;
     const trackingNumber = (formData.get("trackingNumber") as string | null)?.trim() || null;
     const trackingUrl = (formData.get("trackingUrl") as string | null)?.trim() || null;
 
-    if (!orderId) return { success: false, message: "Missing order ID" };
+    if (!orderId) return;
 
     const { error } = await supabase
         .from("orders")
         .update({ tracking_number: trackingNumber, tracking_url: trackingUrl })
         .eq("id", orderId);
 
-    if (error) return { success: false, message: error.message };
+    if (error) return;
 
     const { logAdminAction } = await import("@/lib/audit");
     await logAdminAction(supabase, {
@@ -107,43 +103,35 @@ export async function updateOrderTracking(formData: FormData) {
 
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${orderId}`);
-
-    return { success: true };
 }
 
-export async function processRefund(formData: FormData) {
+export async function processRefund(formData: FormData): Promise<void> {
     const returnRequestId = formData.get("returnRequestId") as string;
     const orderId = formData.get("orderId") as string;
-    if (!returnRequestId || !orderId) return { success: false, message: "Missing IDs" };
+    if (!returnRequestId || !orderId) return;
 
     const { supabase, authorized } = await getAdminUser();
-    if (!authorized) return { success: false, message: "Unauthorized" };
+    if (!authorized) return;
 
-    // Fetch the order to get total and stripe_session_id
     const { data: order, error: orderError } = await supabase
         .from("orders")
         .select("id, total, stripe_session_id")
         .eq("id", orderId)
         .single();
 
-    if (orderError || !order) return { success: false, message: "Order not found" };
-    if (!order.stripe_session_id) return { success: false, message: "No Stripe payment found for this order" };
+    if (orderError || !order || !order.stripe_session_id) return;
 
     try {
         const stripe = getStripe();
-
-        // Retrieve the PaymentIntent to get the latest charge
         const pi = await stripe.paymentIntents.retrieve(order.stripe_session_id);
         const charge = pi.latest_charge as string;
-        if (!charge) return { success: false, message: "No charge found on PaymentIntent" };
+        if (!charge) return;
 
-        // Issue refund
         const refund = await stripe.refunds.create({
             charge,
             reason: "requested_by_customer",
         });
 
-        // Update return_requests to refunded
         const { error: returnError } = await supabase
             .from("return_requests")
             .update({
@@ -154,9 +142,8 @@ export async function processRefund(formData: FormData) {
             })
             .eq("id", returnRequestId);
 
-        if (returnError) return { success: false, message: returnError.message };
+        if (returnError) return;
 
-        // Mark order as cancelled
         await supabase
             .from("orders")
             .update({ status: "cancelled" })
@@ -172,21 +159,18 @@ export async function processRefund(formData: FormData) {
 
         revalidatePath("/admin/orders");
         revalidatePath(`/admin/orders/${orderId}`);
-
-        return { success: true };
-    } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Stripe error";
-        return { success: false, message };
+    } catch {
+        // Stripe errors are silent here — admin can retry
     }
 }
 
-export async function rejectReturn(formData: FormData) {
+export async function rejectReturn(formData: FormData): Promise<void> {
     const returnRequestId = formData.get("returnRequestId") as string;
     const orderId = formData.get("orderId") as string;
-    if (!returnRequestId || !orderId) return { success: false, message: "Missing IDs" };
+    if (!returnRequestId || !orderId) return;
 
     const { supabase, authorized } = await getAdminUser();
-    if (!authorized) return { success: false, message: "Unauthorized" };
+    if (!authorized) return;
 
     const { error } = await supabase
         .from("return_requests")
@@ -196,7 +180,7 @@ export async function rejectReturn(formData: FormData) {
         })
         .eq("id", returnRequestId);
 
-    if (error) return { success: false, message: error.message };
+    if (error) return;
 
     const { logAdminAction } = await import("@/lib/audit");
     await logAdminAction(supabase, {
@@ -208,6 +192,4 @@ export async function rejectReturn(formData: FormData) {
 
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${orderId}`);
-
-    return { success: true };
 }

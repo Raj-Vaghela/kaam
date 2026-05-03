@@ -82,7 +82,7 @@ export async function sendOrderConfirmation(data: OrderEmailData) {
 
     try {
         const { data: result, error } = await getResend().emails.send({
-            from: `${BRAND.name} <orders@${process.env.RESEND_DOMAIN || "resend.dev"}>`,
+            from: `${BRAND.name} <onboarding@resend.dev>`,
             to: customerEmail,
             subject: `Order confirmed · ${orderId} · ${BRAND.name}`,
             html: emailShell(inner),
@@ -126,7 +126,7 @@ export async function sendAccountCreationInvite(data: AccountCreationEmailData) 
 
     try {
         const { data: result, error } = await getResend().emails.send({
-            from: `${BRAND.name} <orders@${process.env.RESEND_DOMAIN || "resend.dev"}>`,
+            from: `${BRAND.name} <onboarding@resend.dev>`,
             to: customerEmail,
             subject: `Create your ${BRAND.name} account`,
             html: emailShell(inner),
