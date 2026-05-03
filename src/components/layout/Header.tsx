@@ -15,6 +15,7 @@ import {
 import { CATEGORIES } from "@/data/mockData";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import Logo from "@/components/brand/Logo";
@@ -28,8 +29,11 @@ interface HeaderProps {
 
 export default function Header({ cartCount, cartTotal, onCartClick }: HeaderProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
+    const [desktopSearch, setDesktopSearch] = useState("");
+    const [mobileSearch, setMobileSearch] = useState("");
     const [user, setUser] = useState<SupabaseUser | null>(null);
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -63,6 +67,23 @@ export default function Header({ cartCount, cartTotal, onCartClick }: HeaderProp
         window.location.href = "/";
     };
 
+    const handleSearch = (term: string) => {
+        const sanitised = term.trim().slice(0, 100).replace(/[%_]/g, "");
+        if (!sanitised) return;
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("search", encodeURIComponent(sanitised));
+        params.delete("page");
+        router.push(`/products?${params.toString()}`);
+    };
+
+    const handleDesktopKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") handleSearch(desktopSearch);
+    };
+
+    const handleMobileKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") handleSearch(mobileSearch);
+    };
+
     return (
         <header className="sticky top-0 z-40 bg-cream/90 backdrop-blur-md border-b border-cream-deep">
             {/* Announcement bar */}
@@ -93,11 +114,20 @@ export default function Header({ cartCount, cartTotal, onCartClick }: HeaderProp
                     />
                     <input
                         type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        value={desktopSearch}
+                        onChange={(e) => setDesktopSearch(e.target.value)}
+                        onKeyDown={handleDesktopKeyDown}
                         placeholder="Search basmati, masala, ghee, mithai…"
                         className="w-full pl-12 pr-4 py-3.5 rounded-full bg-cream-soft border border-cream-deep text-ink placeholder:text-ink-mute focus:outline-none focus:border-accent focus:bg-white transition-all text-sm"
                     />
+                    <button
+                        type="button"
+                        onClick={() => handleSearch(desktopSearch)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-mute hover:text-accent transition-colors"
+                        aria-label="Search"
+                    >
+                        <Search size={16} />
+                    </button>
                 </div>
 
                 <div className="hidden md:flex items-center gap-6 flex-shrink-0 ml-auto">
@@ -185,11 +215,20 @@ export default function Header({ cartCount, cartTotal, onCartClick }: HeaderProp
                 <Search size={16} className="absolute left-7 top-3.5 text-ink-mute pointer-events-none" />
                 <input
                     type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    value={mobileSearch}
+                    onChange={(e) => setMobileSearch(e.target.value)}
+                    onKeyDown={handleMobileKeyDown}
                     placeholder="Search products…"
-                    className="w-full pl-10 pr-4 py-3 rounded-full bg-cream-soft border border-cream-deep text-sm focus:outline-none focus:border-accent"
+                    className="w-full pl-10 pr-10 py-3 rounded-full bg-cream-soft border border-cream-deep text-sm focus:outline-none focus:border-accent"
                 />
+                <button
+                    type="button"
+                    onClick={() => handleSearch(mobileSearch)}
+                    className="absolute right-7 top-3.5 text-ink-mute hover:text-accent transition-colors"
+                    aria-label="Search"
+                >
+                    <Search size={14} />
+                </button>
             </div>
 
             {/* Categories — minimal scroll */}

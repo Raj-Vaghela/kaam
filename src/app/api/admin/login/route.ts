@@ -7,7 +7,7 @@ const ADMIN_LOGIN_WINDOW = 15 * 60 * 1000; // 15 minutes
 
 export async function POST(request: NextRequest) {
     const ip = getClientIp(request);
-    const rl = rateLimit(`admin-login:${ip}`, ADMIN_LOGIN_LIMIT, ADMIN_LOGIN_WINDOW);
+    const rl = await rateLimit(`admin-login:${ip}`, ADMIN_LOGIN_LIMIT, ADMIN_LOGIN_WINDOW);
 
     if (!rl.allowed) {
         return NextResponse.json(

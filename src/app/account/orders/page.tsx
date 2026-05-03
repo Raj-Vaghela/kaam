@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { User, Package, LogOut, ArrowLeft } from "lucide-react";
+import { User, Package, LogOut, ArrowLeft, Truck } from "lucide-react";
 import { getStatusConfig, type OrderItem } from "@/lib/order-status";
+import ReturnRequestButton from "./ReturnRequestButton";
 
 export default async function OrdersPage() {
     const supabase = await createClient();
@@ -11,7 +12,7 @@ export default async function OrdersPage() {
 
     const { data: orders } = await supabase
         .from("orders")
-        .select(`*, order_items (*)`)
+        .select(`*, order_items (*), tracking_number, tracking_url`)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -89,6 +90,30 @@ export default async function OrdersPage() {
                                                 , {order.shipping_address.city}, {order.shipping_address.postcode}
                                             </p>
                                         </div>
+                                    )}
+
+                                    {order.tracking_number && (
+                                        <div className="mt-4 pt-4 border-t border-cream-deep flex items-center gap-2 flex-wrap">
+                                            <Truck size={14} className="text-emerald-600 shrink-0" />
+                                            <span className="text-sm text-ink-soft">
+                                                Tracking:{" "}
+                                                <span className="font-mono text-ink">{order.tracking_number}</span>
+                                            </span>
+                                            {order.tracking_url && (
+                                                <a
+                                                    href={order.tracking_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-sm font-medium text-accent hover:underline inline-flex items-center gap-1"
+                                                >
+                                                    Track package →
+                                                </a>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {order.status === "delivered" && (
+                                        <ReturnRequestButton orderId={order.id} />
                                     )}
                                 </div>
                             </div>

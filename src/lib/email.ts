@@ -30,15 +30,17 @@ interface OrderEmailData {
     invoicePdfUrl?: string;
 }
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://gajjuexpress.co.uk";
+
 function emailShell(inner: string) {
     return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: ${INK}; margin: 0; padding: 0; background: ${CREAM};">
     <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
         <div style="text-align: center; margin-bottom: 32px;">
-            <h1 style="color: ${TEAL}; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.5px;">${BRAND.name}</h1>
-            <p style="color: ${TERRACOTTA}; margin: 4px 0 0; font-size: 13px; font-style: italic;">${BRAND.taglineEn}</p>
+            <img src="${APP_URL}/gajjuexpress-logo-h.png" alt="${BRAND.name}" width="180" height="48"
+                 style="max-width: 180px; height: auto; display: block; margin: 0 auto;">
         </div>
         ${inner}
         <hr style="border: none; border-top: 1px solid #ebe3d2; margin: 36px 0 24px;">
@@ -57,6 +59,8 @@ export async function sendOrderConfirmation(data: OrderEmailData) {
 
     const inner = `
         <div style="background: linear-gradient(135deg, ${TEAL_DEEP} 0%, ${TEAL} 100%); color: white; padding: 40px 32px; border-radius: 20px; text-align: center; margin-bottom: 28px;">
+            <img src="${APP_URL}/gajjuexpress-logo-h-white.png" alt="${BRAND.name}" width="160" height="42"
+                 style="max-width: 160px; height: auto; display: block; margin: 0 auto 20px; opacity: 0.95;">
             <h2 style="margin: 0 0 8px; font-size: 28px; font-weight: 700;">Bahot bahot dhanyavaad!</h2>
             <p style="margin: 0; opacity: 0.85; font-size: 15px;">Order #${escapeHtml(orderId)}</p>
         </div>
@@ -78,7 +82,7 @@ export async function sendOrderConfirmation(data: OrderEmailData) {
 
     try {
         const { data: result, error } = await getResend().emails.send({
-            from: `${BRAND.name} <orders@${process.env.RESEND_DOMAIN || "resend.dev"}>`,
+            from: `${BRAND.name} <onboarding@resend.dev>`,
             to: customerEmail,
             subject: `Order confirmed · ${orderId} · ${BRAND.name}`,
             html: emailShell(inner),
@@ -122,7 +126,7 @@ export async function sendAccountCreationInvite(data: AccountCreationEmailData) 
 
     try {
         const { data: result, error } = await getResend().emails.send({
-            from: `${BRAND.name} <orders@${process.env.RESEND_DOMAIN || "resend.dev"}>`,
+            from: `${BRAND.name} <onboarding@resend.dev>`,
             to: customerEmail,
             subject: `Create your ${BRAND.name} account`,
             html: emailShell(inner),

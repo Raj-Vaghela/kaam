@@ -8,6 +8,8 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 
+export const revalidate = 60; // revalidate homepage every 60 seconds
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://gajjuexpress.co.uk";
 
 export const metadata: Metadata = {
@@ -60,7 +62,7 @@ export default async function HomePage() {
     const supabase = await createClient();
     const { data: bestsellers } = await supabase
         .from("products")
-        .select("id, name, category, price, image_url, unit, weight_kg, rating, bestseller, club_price")
+        .select("id, name, category, price, image_url, unit, weight_kg, rating, bestseller, club_price, stock")
         .eq("bestseller", true)
         .limit(4);
 
