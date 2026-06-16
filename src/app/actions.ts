@@ -178,6 +178,11 @@ export async function validatePromoCode(code: string, subtotal: number): Promise
     const upperCode = code.trim().toUpperCase();
 
     const supabase = await createClient();
+    // TODO: Replace this read with an atomic `validate_and_reserve_promo_code` SECURITY DEFINER RPC
+    // that executes `SELECT ... FOR UPDATE` inside a transaction. The current SELECT is subject to a
+    // TOCTOU race where two concurrent checkouts can both pass the max_uses check and both succeed.
+    // The RPC should atomically validate AND increment uses in one step, returning the discount data
+    // or raising an exception if the code is invalid/exhausted. Migration agent owns this RPC.
     const { data: promo } = await supabase
         .from('promo_codes')
         .select('*')
@@ -338,9 +343,10 @@ export async function createPaymentIntent({ cart, email, promoCode }: CreatePaym
             .update({ stripe_session_id: paymentIntent.id })
             .eq("id", order.id);
 
-        if (appliedPromoCode) {
-            await supabase.rpc('increment_promo_code_uses', { p_code: appliedPromoCode });
-        }
+        // NOTE: increment_promo_code_uses is intentionally NOT called here.
+        // Promo code usage is incremented only after payment is confirmed, inside
+        // the payment_intent.succeeded webhook handler. Incrementing here would
+        // count uses for abandoned checkouts (customer initiated PI but never paid).
 
         return {
             success: true,

@@ -63,3 +63,8 @@ status.txt
 **/public/worker-*.js
 **/public/sw.js.map
 **/public/workbox-*.js.map
+
+# Audit 2026-06-03: added artifact + sensitive dump ignores
+playwright-report/
+test-results/
+tsconfig.tsbuildinfo

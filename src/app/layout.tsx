@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { Inter, Fraunces, Hind_Vadodara } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
+import { ConsentProvider } from "@/context/ConsentContext";
 import ClientShell from "@/components/layout/ClientShell";
 import CookieConsent from "@/components/gdpr/CookieConsent";
+import GatedAnalytics from "@/components/analytics/GatedAnalytics";
 import { BRAND } from "@/lib/brand";
-import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
     variable: "--font-inter",
@@ -100,11 +101,14 @@ export default function RootLayout({
             <body
                 className={`${inter.variable} ${fraunces.variable} ${hindVadodara.variable} antialiased bg-cream text-ink`}
             >
-                <CartProvider>
-                    <ClientShell>{children}</ClientShell>
+                <ConsentProvider>
+                    <CartProvider>
+                        <ClientShell>{children}</ClientShell>
+                    </CartProvider>
+                    {/* CookieConsent and GatedAnalytics must be inside ConsentProvider */}
                     <CookieConsent />
-                </CartProvider>
-                <Analytics />
+                    <GatedAnalytics />
+                </ConsentProvider>
             </body>
         </html>
     );

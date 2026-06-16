@@ -29,6 +29,23 @@ export async function getNewsletterSubscriber(email: string) {
   return data
 }
 
+export async function getOrderByUserId(userId: string) {
+  const db = getServiceClient()
+  const { data } = await db
+    .from('orders')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+  return data
+}
+
+export async function deleteOrdersByUserId(userId: string) {
+  const db = getServiceClient()
+  await db.from('orders').delete().eq('user_id', userId)
+}
+
 export async function deleteOrdersByEmail(email: string) {
   const db = getServiceClient()
   await db.from('orders').delete().eq('guest_email', email)

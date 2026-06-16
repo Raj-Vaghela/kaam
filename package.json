@@ -1,5 +1,5 @@
 {
-  "name": "desimart-next",
+  "name": "gajjuexpress",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,12 +10,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test",
+    "test:e2e": "kill $(lsof -ti:3000) 2>/dev/null; rm -f .next/dev/lock; sleep 1 && playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
-    "@react-pdf/renderer": "^4.3.2",
     "@sentry/nextjs": "^10.51.0",
     "@stripe/react-stripe-js": "^6.2.0",
     "@stripe/stripe-js": "^9.3.1",

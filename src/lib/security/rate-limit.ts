@@ -1,6 +1,30 @@
 // Redis mode: set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in .env.local
-// Get these from https://console.upstash.com — create a Redis database, copy REST URL and token
-// Without these vars, falls back to in-memory limiting (fine for single-instance dev/staging)
+// Get these from https://console.upstash.com — create a Redis database, copy REST URL and token.
+// In production the in-memory fallback is disabled: Vercel runs multiple instances so per-process
+// counters are useless. Missing Upstash vars in production cause an immediate startup failure so
+// misconfigurations are caught at deploy time rather than silently under-enforcing rate limits.
+
+// Production guard: refuse to start if Upstash is not configured (in-memory fallback is
+// per-process and therefore ineffective on multi-instance Vercel deployments).
+if (
+    process.env.NODE_ENV === "production" &&
+    (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN)
+) {
+    throw new Error(
+        "[rate-limit] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set in production. " +
+        "The in-memory fallback is not safe on multi-instance deployments. " +
+        "Create a Redis database at https://console.upstash.com and add both vars to your Vercel env."
+    );
+}
+
+// Dev/test warning: in-memory fallback is active; log once to avoid noise.
+if (process.env.NODE_ENV !== "production" &&
+    (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN)) {
+    console.warn(
+        "[rate-limit] Upstash env vars not set — using in-memory fallback. " +
+        "This is fine for local development but must not reach production."
+    );
+}
 
 export interface RateLimitResult {
     allowed: boolean;

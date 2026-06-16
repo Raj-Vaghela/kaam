@@ -49,18 +49,33 @@ function AuthPageInner() {
                 router.push(redirect);
                 router.refresh();
             } else {
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
                     options: { data: { full_name: fullName } },
                 });
                 if (error) {
-                    setError("Could not create account. The email may already be in use, or try a stronger password.");
+                    const code = (error as { code?: string }).code;
+                    const msg = error.message?.toLowerCase() ?? "";
+                    if (code === "weak_password" || msg.includes("password")) {
+                        setError("Password is too weak. Use at least 8 characters with a mix of letters, numbers, and symbols.");
+                    } else if (code === "user_already_exists" || msg.includes("already")) {
+                        setError("An account with this email already exists. Try signing in instead.");
+                    } else if (code === "validation_failed" || msg.includes("email")) {
+                        setError("That email address doesn't look valid. Please check and try again.");
+                    } else {
+                        setError("Could not create account. Please try again in a moment.");
+                    }
+                    return;
+                }
+                if (data.user && data.user.identities && data.user.identities.length === 0) {
+                    setError("An account with this email already exists. Try signing in instead.");
                     return;
                 }
                 setMessage("Check your email for the confirmation link!");
             }
-        } catch {
+        } catch (err) {
+            console.error("[auth] unexpected error during sign-in/up:", err);
             setError("Something went wrong. Please try again.");
         } finally {
             setLoading(false);

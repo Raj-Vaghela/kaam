@@ -43,12 +43,17 @@ async function globalSetup() {
     console.log('Admin user already exists')
   }
 
-  // 2. Seed test products
+  // 2. Seed test products (insert-if-absent; no unique constraint on name so we check first)
+  let seeded = 0
   for (const product of TEST_PRODUCTS) {
-    const { error } = await db.from('products').upsert(product, { onConflict: 'name' })
-    if (error) console.warn(`Warning: could not seed product "${product.name}": ${error.message}`)
+    const { data: existing } = await db.from('products').select('id').eq('name', product.name).maybeSingle()
+    if (!existing) {
+      const { error } = await db.from('products').insert(product)
+      if (error) console.warn(`Warning: could not seed product "${product.name}": ${error.message}`)
+      else seeded++
+    }
   }
-  console.log(`${TEST_PRODUCTS.length} test products seeded`)
+  console.log(`${seeded} test products seeded (${TEST_PRODUCTS.length - seeded} already present)`)
 
   // 3. Seed a test order for admin order tests (delete-first for idempotency)
   const { data: firstProduct } = await db.from('products').select('id, name, price').limit(1).single()

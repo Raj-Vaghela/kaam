@@ -94,10 +94,14 @@ export default function Header({ cartCount, cartTotal, onCartClick }: HeaderProp
                         Free next-day delivery on orders over £40
                     </span>
                     <div className="hidden sm:flex gap-5 font-medium">
-                        <a href={BRAND.social.whatsapp} target="_blank" rel="noopener noreferrer" className="hover:text-haldi flex items-center gap-1.5 transition-colors">
-                            <HelpCircle size={11} /> Help
-                        </a>
-                        <span className="opacity-70">{BRAND.contact.phone}</span>
+                        {BRAND.social.whatsapp ? (
+                            <a href={BRAND.social.whatsapp} target="_blank" rel="noopener noreferrer" className="hover:text-haldi flex items-center gap-1.5 transition-colors">
+                                <HelpCircle size={11} /> Help
+                            </a>
+                        ) : null}
+                        {BRAND.contact.phone ? (
+                            <span className="opacity-70">{BRAND.contact.phone}</span>
+                        ) : null}
                     </div>
                 </div>
             </div>

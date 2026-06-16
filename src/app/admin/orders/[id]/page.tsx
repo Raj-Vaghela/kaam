@@ -4,7 +4,9 @@ import { ArrowLeft, FileText, Package, Truck, MapPin, User, RotateCcw } from "lu
 import { createClient } from "@/lib/supabase/server";
 import { getStatusConfig } from "@/lib/order-status";
 import { calculateVAT } from "@/lib/invoice";
-import { updateOrderStatus, updateOrderTracking, processRefund, rejectReturn } from "../actions";
+import { UpdateStatusForm, UpdateTrackingForm, ReturnDecisionButtons } from "./AdminOrderForms";
+import GenerateLabelButton from "./GenerateLabelButton";
+import { isShippingConfigured, getSignedLabelUrl } from "@/lib/shipping";
 
 const ALL_STATUSES = [
     { value: "pending", label: "Pending" },
@@ -49,6 +51,7 @@ interface OrderRow {
     billing_address: ShippingAddress | null;
     tracking_number: string | null;
     tracking_url: string | null;
+    label_url: string | null;
     invoice_id: string | null;
     stripe_session_id: string | null;
     order_items: OrderItemRow[];
@@ -100,6 +103,8 @@ export default async function AdminOrderDetailPage({
 
     const addr = order.shipping_address;
     const customer = order.guest_email ?? (order.user_id ? "Account holder" : "Guest");
+    const shippingConfigured = isShippingConfigured();
+    const labelDownloadUrl = await getSignedLabelUrl(order.label_url);
 
     return (
         <div>
@@ -197,69 +202,38 @@ export default async function AdminOrderDetailPage({
                         <h2 className="font-semibold text-ink text-sm uppercase tracking-wide mb-4">
                             Update Status
                         </h2>
-                        <form action={updateOrderStatus} className="flex items-center gap-3">
-                            <input type="hidden" name="orderId" value={order.id} />
-                            <select
-                                name="status"
-                                defaultValue={order.status ?? "pending"}
-                                className="flex-1 px-4 py-2.5 text-sm bg-cream border border-cream-deep rounded-full focus:outline-none focus:border-accent text-ink"
-                            >
-                                {ALL_STATUSES.map((s) => (
-                                    <option key={s.value} value={s.value}>
-                                        {s.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <button
-                                type="submit"
-                                className="px-5 py-2.5 text-sm font-semibold text-white bg-[var(--gajju-teal-deep)] rounded-full hover:opacity-90 transition-opacity"
-                            >
-                                Update Status
-                            </button>
-                        </form>
+                        <UpdateStatusForm
+                            orderId={order.id}
+                            currentStatus={order.status ?? "pending"}
+                            options={ALL_STATUSES}
+                        />
                     </div>
 
-                    {/* Tracking */}
+                    {/* Shipping Label */}
                     <div className="bg-cream-soft border border-cream-deep rounded-3xl p-6">
                         <div className="flex items-center gap-2 mb-4">
                             <Truck size={16} className="text-accent" />
-                            <h2 className="font-semibold text-ink text-sm uppercase tracking-wide">Tracking</h2>
+                            <h2 className="font-semibold text-ink text-sm uppercase tracking-wide">Shipping Label</h2>
                         </div>
-                        <form action={updateOrderTracking} className="space-y-3">
-                            <input type="hidden" name="orderId" value={order.id} />
-                            <div>
-                                <label className="block text-xs font-semibold text-ink-mute uppercase tracking-wide mb-1.5">
-                                    Tracking Number
-                                </label>
-                                <input
-                                    type="text"
-                                    name="trackingNumber"
-                                    defaultValue={order.tracking_number ?? ""}
-                                    placeholder="e.g. JD123456789GB"
-                                    className="w-full px-4 py-2.5 text-sm bg-cream border border-cream-deep rounded-2xl focus:outline-none focus:border-accent text-ink font-mono placeholder:font-sans placeholder:text-ink-mute"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-ink-mute uppercase tracking-wide mb-1.5">
-                                    Tracking URL
-                                </label>
-                                <input
-                                    type="url"
-                                    name="trackingUrl"
-                                    defaultValue={order.tracking_url ?? ""}
-                                    placeholder="https://track.royalmail.com/..."
-                                    className="w-full px-4 py-2.5 text-sm bg-cream border border-cream-deep rounded-2xl focus:outline-none focus:border-accent text-ink placeholder:text-ink-mute"
-                                />
-                            </div>
-                            <div className="flex justify-end pt-1">
-                                <button
-                                    type="submit"
-                                    className="px-5 py-2.5 text-sm font-semibold text-accent bg-accent-soft rounded-full hover:bg-accent hover:text-white transition-colors"
-                                >
-                                    Save Tracking
-                                </button>
-                            </div>
-                        </form>
+
+                        <GenerateLabelButton
+                            orderId={order.id}
+                            labelUrl={labelDownloadUrl}
+                            trackingNumber={order.tracking_number}
+                            trackingUrl={order.tracking_url}
+                            shippingConfigured={shippingConfigured}
+                        />
+
+                        <details className="mt-5">
+                            <summary className="text-xs text-ink-mute cursor-pointer hover:text-ink">
+                                Manual tracking override
+                            </summary>
+                            <UpdateTrackingForm
+                                orderId={order.id}
+                                trackingNumber={order.tracking_number}
+                                trackingUrl={order.tracking_url}
+                            />
+                        </details>
                     </div>
 
                     {/* Returns */}
@@ -298,28 +272,10 @@ export default async function AdminOrderDetailPage({
                             </p>
 
                             {returnRequest.status === "pending" && (
-                                <div className="flex items-center gap-3">
-                                    <form action={processRefund}>
-                                        <input type="hidden" name="returnRequestId" value={returnRequest.id} />
-                                        <input type="hidden" name="orderId" value={order.id} />
-                                        <button
-                                            type="submit"
-                                            className="px-5 py-2.5 text-sm font-semibold text-white bg-[var(--gajju-teal-deep)] rounded-full hover:opacity-90 transition-opacity"
-                                        >
-                                            Approve &amp; Refund
-                                        </button>
-                                    </form>
-                                    <form action={rejectReturn}>
-                                        <input type="hidden" name="returnRequestId" value={returnRequest.id} />
-                                        <input type="hidden" name="orderId" value={order.id} />
-                                        <button
-                                            type="submit"
-                                            className="px-5 py-2.5 text-sm font-semibold text-rose-700 bg-rose-50 rounded-full hover:bg-rose-100 transition-colors"
-                                        >
-                                            Reject
-                                        </button>
-                                    </form>
-                                </div>
+                                <ReturnDecisionButtons
+                                    orderId={order.id}
+                                    returnRequestId={returnRequest.id}
+                                />
                             )}
 
                             {returnRequest.status === "refunded" && returnRequest.refund_amount && (

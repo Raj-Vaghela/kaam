@@ -117,7 +117,7 @@ export default function CheckoutForm({ orderId, guestToken, email, amount }: Pro
                     <CreditCard size={20} className="text-accent" />
                     Payment details
                 </h2>
-                <PaymentElement options={{ layout: "tabs" }} />
+                <PaymentElement options={{ layout: "tabs", wallets: { link: 'never' } }} />
             </div>
 
             {error && (

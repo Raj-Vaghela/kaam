@@ -131,11 +131,16 @@ const faqs: { q: string; a: React.ReactNode }[] = [
                 >
                     {BRAND.contact.email}
                 </a>
-                , by phone on{" "}
-                <a href={`tel:${BRAND.contact.phone}`} className="text-accent underline">
-                    {BRAND.contact.phone}
-                </a>{" "}
-                (Monday to Friday, 9am–5pm), or via WhatsApp. We aim to respond to all
+                {BRAND.contact.phone ? (
+                    <>
+                        , by phone on{" "}
+                        <a href={`tel:${BRAND.contact.phone}`} className="text-accent underline">
+                            {BRAND.contact.phone}
+                        </a>{" "}
+                        (Monday to Friday, 9am–5pm)
+                    </>
+                ) : null}
+                {BRAND.social.whatsapp ? ", or via WhatsApp" : ""}. We aim to respond to all
                 enquiries within one working day.
             </>
         ),
