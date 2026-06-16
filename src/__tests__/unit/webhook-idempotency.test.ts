@@ -18,17 +18,15 @@ const { mockInsert, mockStripeConstruct } = vi.hoisted(() => {
 });
 
 // Mock Stripe so constructEvent returns a deterministic event without needing
-// a real signature.
+// a real signature. Implemented as a class because the route calls `new Stripe(...)`
+// — arrow functions can't be used with `new`.
 vi.mock("stripe", () => {
-    return {
-        default: vi.fn().mockImplementation(() => ({
-            webhooks: {
-                constructEvent: mockStripeConstruct,
-            },
-            paymentIntents: { retrieve: vi.fn() },
-            charges: { retrieve: vi.fn() },
-        })),
-    };
+    class StripeMock {
+        webhooks = { constructEvent: mockStripeConstruct };
+        paymentIntents = { retrieve: vi.fn() };
+        charges = { retrieve: vi.fn() };
+    }
+    return { default: StripeMock };
 });
 
 // Mock Supabase service-role client used inside the route.

@@ -14,6 +14,11 @@ export default defineConfig({
       NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: 'pk_test_placeholder',
+      // Live business is not VAT-registered, but the VAT math is kept under test
+      // as a regression guard for the day the business crosses the £90k threshold.
+      // isVatRegistered requires both flag=true AND a non-placeholder VAT_NUMBER.
+      VAT_REGISTERED: 'true',
+      VAT_NUMBER: 'GB123456789',
     },
   },
   resolve: {
