@@ -12,7 +12,11 @@
 
 -- ── Part A: existing single-item function (recovered from production) ──
 -- SECURITY DEFINER + locked search_path added here; production version
--- may lack these. CREATE OR REPLACE is safe — it replaces if present.
+-- may lack these. The existing remote function was declared with parameter
+-- names `p_product_id, p_quantity`; we rename to `product_id, quantity` for
+-- clarity, which CREATE OR REPLACE cannot do — so we DROP first.
+-- The signature (uuid, int) is unchanged, so positional callers are unaffected.
+DROP FUNCTION IF EXISTS public.decrement_stock(uuid, int);
 
 CREATE OR REPLACE FUNCTION public.decrement_stock(
     product_id uuid,
