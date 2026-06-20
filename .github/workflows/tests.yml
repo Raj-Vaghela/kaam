@@ -44,6 +44,8 @@ jobs:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          # Placeholder — E2E does not send mail; env.ts only requires the var be truthy.
+          RESEND_API_KEY: re_test_placeholder
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
