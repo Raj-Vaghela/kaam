@@ -15,6 +15,10 @@ test.describe('Newsletter signup', () => {
     const emailInput = page.getByPlaceholder('your@email.com')
     await emailInput.fill(email)
 
+    // GDPR rewrite (2026-06) made the consent checkbox mandatory; Subscribe is
+    // disabled until it is ticked.
+    await page.getByRole('checkbox').check()
+
     // Wait for the API response — more reliable than the 3s "Thanks!" button window
     const responsePromise = page.waitForResponse(
       resp => resp.url().includes('/api/newsletter') && resp.status() === 200
@@ -28,11 +32,12 @@ test.describe('Newsletter signup', () => {
     expect(subscriber.source).toBe('footer')
   })
 
-  test('duplicate submission shows already-subscribed error without crashing', async ({ page }) => {
+  test('duplicate submission returns success without enumerating subscribers', async ({ page }) => {
     // First subscription
     await page.goto('/')
     const emailInput = page.getByPlaceholder('your@email.com')
     await emailInput.fill(email)
+    await page.getByRole('checkbox').check()
 
     const first = page.waitForResponse(
       resp => resp.url().includes('/api/newsletter') && resp.status() === 200
@@ -43,11 +48,17 @@ test.describe('Newsletter signup', () => {
     // Wait for "Thanks!" to revert before second submission
     await expect(page.getByRole('button', { name: 'Subscribe' })).toBeVisible({ timeout: 5_000 })
 
-    // Second submission with same email — expect 409 and "already subscribed" UI
+    // Second submission with same email. The GDPR-compliant route returns 200 with
+    // the same neutral success message regardless of whether the email is already
+    // subscribed — this prevents address-enumeration via the form. The UI shows
+    // "Sent!" both times; there is no "already subscribed" error path.
     await emailInput.fill(email)
-    await page.getByRole('button', { name: 'Subscribe' }).click()
+    await page.getByRole('checkbox').check()
 
-    await expect(page.getByText("You're already subscribed")).toBeVisible({ timeout: 10_000 })
-    await expect(page.getByRole('link', { name: 'Privacy', exact: true })).toBeVisible()
+    const second = page.waitForResponse(
+      resp => resp.url().includes('/api/newsletter') && resp.status() === 200
+    )
+    await page.getByRole('button', { name: 'Subscribe' }).click()
+    await second
   })
 })

@@ -44,7 +44,9 @@ test.describe('Guest checkout', () => {
     // Create the payment intent
     await page.getByRole('button', { name: /Continue to Payment/i }).click()
 
-    const addressFrame = page.frameLocator('iframe[title="Secure address input frame"]')
+    // Stripe iframe titles have changed across versions ("Secure address input
+    // frame" → "Secure address element"). Match by substring to survive renames.
+    const addressFrame = page.frameLocator('iframe[title*="address" i]')
 
     // Wait for address frame to mount — first visible input is the Name field
     await expect(addressFrame.locator('input').first()).toBeVisible({ timeout: 20_000 })
@@ -71,7 +73,8 @@ test.describe('Guest checkout', () => {
 
     // Fill Stripe card details (PaymentElement — exclude aria-hidden autocomplete frame).
     // Click "Card" tab first — Revolut Pay may be auto-selected by Stripe.
-    const paymentFrame = page.frameLocator('iframe[title="Secure payment input frame"]:not([aria-hidden="true"])')
+    // Substring match to survive Stripe iframe title renames.
+    const paymentFrame = page.frameLocator('iframe[title*="payment" i]:not([aria-hidden="true"])')
     const cardTab = paymentFrame.getByRole('tab', { name: /card/i })
     if (await cardTab.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await cardTab.click()
