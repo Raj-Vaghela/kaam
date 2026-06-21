@@ -79,8 +79,10 @@ test.describe('Authenticated user checkout', () => {
     // Wait for address frame to mount — first visible input is the Name field
     await expect(addressFrame.locator('input').first()).toBeVisible({ timeout: 20_000 })
 
-    // 5. Fill address — click() before fill() triggers blur on the previous field,
-    // which commits its value to Stripe's AddressElement internal state.
+    // 5. Fill address. Stripe's AddressElement only marks itself "complete" when
+    // each field receives real input events; .fill() bulk-sets the value without
+    // firing the per-character events Stripe listens for. Use pressSequentially
+    // everywhere, then Tab off to flush async validation.
     const addrName = addressFrame.locator('input[autocomplete="shipping name"]')
     const addrLine1 = addressFrame.locator('input[autocomplete="shipping address-line1"]')
     const addrCity = addressFrame.locator('input[autocomplete="shipping address-level2"]')
@@ -88,13 +90,13 @@ test.describe('Authenticated user checkout', () => {
     const addrPhone = addressFrame.locator('input[autocomplete="shipping tel"]')
 
     await addrName.click()
-    await addrName.fill('Reg Test User')
+    await addrName.pressSequentially('Reg Test User', { delay: 20 })
     await addrLine1.click()
-    await addrLine1.fill('10 User Lane')
+    await addrLine1.pressSequentially('10 User Lane', { delay: 20 })
     await addrCity.click()
-    await addrCity.fill('Manchester')
+    await addrCity.pressSequentially('Manchester', { delay: 20 })
     await addrPost.click()
-    await addrPost.fill('M1 1AA')
+    await addrPost.pressSequentially('M1 1AA', { delay: 20 })
     await addrPhone.click()
     await addrPhone.pressSequentially('7911123456', { delay: 20 })
     await addrPhone.press('Tab')

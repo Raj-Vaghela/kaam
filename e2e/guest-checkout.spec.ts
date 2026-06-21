@@ -51,8 +51,10 @@ test.describe('Guest checkout', () => {
     // Wait for address frame to mount — first visible input is the Name field
     await expect(addressFrame.locator('input').first()).toBeVisible({ timeout: 20_000 })
 
-    // Fill address fields. click() before each fill ensures the previous field gets a blur event,
-    // which triggers Stripe's AddressElement to commit the value to its internal state.
+    // Fill address fields. Stripe's AddressElement only marks itself "complete"
+    // when each field receives real input events; .fill() bulk-sets the value
+    // without firing the per-character events Stripe listens for. Use
+    // pressSequentially everywhere, then Tab off to flush async validation.
     const addrName = addressFrame.locator('input[autocomplete="shipping name"]')
     const addrLine1 = addressFrame.locator('input[autocomplete="shipping address-line1"]')
     const addrCity = addressFrame.locator('input[autocomplete="shipping address-level2"]')
@@ -60,16 +62,18 @@ test.describe('Guest checkout', () => {
     const addrPhone = addressFrame.locator('input[autocomplete="shipping tel"]')
 
     await addrName.click()
-    await addrName.fill('Test Guest User')
+    await addrName.pressSequentially('Test Guest User', { delay: 20 })
     await addrLine1.click()
-    await addrLine1.fill('1 Test Street')
+    await addrLine1.pressSequentially('1 Test Street', { delay: 20 })
     await addrCity.click()
-    await addrCity.fill('London')
+    await addrCity.pressSequentially('London', { delay: 20 })
     await addrPost.click()
-    await addrPost.fill('E1 1AA')
+    await addrPost.pressSequentially('E1 1AA', { delay: 20 })
     await addrPhone.click()
     await addrPhone.pressSequentially('7911123456', { delay: 20 })
     await addrPhone.press('Tab')
+    // Allow Stripe's AddressElement to async-validate after the final blur
+    await page.waitForTimeout(1000)
 
     // Fill Stripe card details (PaymentElement — exclude aria-hidden autocomplete frame).
     // Click "Card" tab first — Revolut Pay may be auto-selected by Stripe.
