@@ -63,7 +63,7 @@ export async function cancelOrder(orderId: string): Promise<CancelOrderResult> {
     const { data: order, error: fetchError } = await supabase
         .from("orders")
         .select(
-            "id, status, total, stripe_payment_intent_id, guest_email, shipping_address, order_items (product_id, quantity)"
+            "id, status, total, stripe_payment_intent_id, stripe_session_id, guest_email, shipping_address, order_items (product_id, quantity)"
         )
         .eq("id", orderId)
         .single();
@@ -95,7 +95,10 @@ export async function cancelOrder(orderId: string): Promise<CancelOrderResult> {
         apiVersion: "2026-01-28.clover",
     });
 
-    const piId = order.stripe_payment_intent_id;
+    // Backward compat: older orders stored the PaymentIntent ID in
+    // stripe_session_id (a legacy column from when Stripe Checkout was used).
+    // New orders write to both columns; either is acceptable here.
+    const piId = order.stripe_payment_intent_id || order.stripe_session_id;
     const paymentWasCaptured = order.status === "paid" || order.status === "payment_processing";
 
     // 4. Stripe operation (refund or cancel the payment intent).

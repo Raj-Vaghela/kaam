@@ -366,9 +366,16 @@ export async function createPaymentIntent({ cart, email, promoCode }: CreatePaym
             description: `GajjuExpress order ${order.id.slice(0, 8).toUpperCase()}`,
         });
 
+        // Write to both columns: stripe_payment_intent_id is the canonical
+        // field added in migration 20260603000008. stripe_session_id is kept
+        // populated as a fallback for any code still reading the legacy
+        // column until we drop it.
         await supabaseSvc
             .from("orders")
-            .update({ stripe_session_id: paymentIntent.id })
+            .update({
+                stripe_payment_intent_id: paymentIntent.id,
+                stripe_session_id: paymentIntent.id,
+            })
             .eq("id", order.id);
 
         // NOTE: increment_promo_code_uses is intentionally NOT called here.
