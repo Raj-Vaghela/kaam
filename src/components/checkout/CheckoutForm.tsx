@@ -105,6 +105,12 @@ export default function CheckoutForm({ orderId, guestToken, email, amount }: Pro
                     options={{
                         mode: "shipping",
                         allowedCountries: ["GB", "IE"],
+                        // Force GB as the initial country. Without this, Stripe
+                        // geo-detects from the client IP, which on GHA runners
+                        // (Azure Dublin) and other EU-Ireland datacentres
+                        // defaults to IE — a UX trap for UK customers and the
+                        // cause of E2E failures on CI.
+                        defaultValues: { address: { country: "GB" } },
                         fields: { phone: "always" },
                         validation: { phone: { required: "always" } },
                     }}
