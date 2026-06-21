@@ -2,6 +2,9 @@ import { Users, Shield, UserCircle, CheckCircle2, AlertCircle } from "lucide-rea
 import { requireAdmin } from "@/lib/auth/admin";
 import { createClient } from "@/lib/supabase/server";
 
+// Admin views must always reflect current DB state.
+export const dynamic = "force-dynamic";
+
 interface UserRow {
     id: string;
     email: string;

@@ -6,6 +6,9 @@ import { getStatusConfig } from "@/lib/order-status";
 import { calculateVAT } from "@/lib/invoice";
 import { UpdateStatusForm, UpdateTrackingForm, ReturnDecisionButtons } from "./AdminOrderForms";
 import GenerateLabelButton from "./GenerateLabelButton";
+
+// Admin views must always reflect current DB state.
+export const dynamic = "force-dynamic";
 import { isShippingConfigured, getSignedLabelUrl } from "@/lib/shipping";
 
 const ALL_STATUSES = [

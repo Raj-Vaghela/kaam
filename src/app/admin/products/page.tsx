@@ -3,6 +3,12 @@ import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import ProductsTable from "./ProductsTable";
 
+// Admin views must always reflect the latest DB state. Stock counts move when
+// the Stripe webhook decrements after each paid order, but the webhook does
+// not call revalidatePath('/admin/products') — so without force-dynamic the
+// page can serve a cached RSC payload that shows yesterday's stock.
+export const dynamic = "force-dynamic";
+
 interface ProductRow {
     id: string;
     name: string;

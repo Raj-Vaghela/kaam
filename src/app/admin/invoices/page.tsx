@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { FileText, Download, Mail, Calendar, User } from "lucide-react";
 
+// Admin views must always reflect current DB state.
+export const dynamic = "force-dynamic";
+
 export default async function AdminInvoicesPage() {
     const supabase = await createClient();
 

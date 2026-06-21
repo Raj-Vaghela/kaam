@@ -3,6 +3,9 @@ import { ShoppingBag, Calendar, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getStatusConfig } from "@/lib/order-status";
 
+// Admin views must always reflect current DB state.
+export const dynamic = "force-dynamic";
+
 const STATUS_FILTERS = [
     { label: "All", value: "" },
     { label: "Pending", value: "pending" },

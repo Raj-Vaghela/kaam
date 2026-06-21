@@ -2,6 +2,9 @@ import Link from "next/link";
 import { TrendingUp, ShoppingBag, Package, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
+// Admin views must always reflect current DB state.
+export const dynamic = "force-dynamic";
+
 interface OrderRow {
     id: string;
     total: number | null;
