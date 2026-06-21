@@ -4,6 +4,10 @@ import Link from "next/link";
 import { User, Package, LogOut, ArrowLeft, Truck } from "lucide-react";
 import { getStatusConfig, type OrderItem } from "@/lib/order-status";
 import ReturnRequestButton from "./ReturnRequestButton";
+import CancelOrderButton from "./CancelOrderButton";
+
+const CANCELLABLE_STATUSES = new Set(["pending", "paid", "payment_processing"]);
+const PAYMENT_CAPTURED_STATUSES = new Set(["paid", "payment_processing"]);
 
 export default async function OrdersPage() {
     const supabase = await createClient();
@@ -110,6 +114,14 @@ export default async function OrdersPage() {
                                                 </a>
                                             )}
                                         </div>
+                                    )}
+
+                                    {CANCELLABLE_STATUSES.has(order.status) && (
+                                        <CancelOrderButton
+                                            orderId={order.id}
+                                            orderTotal={Number(order.total) || 0}
+                                            paymentCaptured={PAYMENT_CAPTURED_STATUSES.has(order.status)}
+                                        />
                                     )}
 
                                     {order.status === "delivered" && (

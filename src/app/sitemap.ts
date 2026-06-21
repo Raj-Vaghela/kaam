@@ -3,6 +3,8 @@ import { CATEGORIES } from "@/data/mockData";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+    if (process.env.SITE_PASSWORD) return [];
+
     const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://gajjuexpress.co.uk";
     const now = new Date();
 

@@ -174,6 +174,49 @@ export async function sendPaymentProcessingEmail(data: PaymentProcessingEmailDat
 }
 
 // ---------------------------------------------------------------------------
+// Order cancellation email — customer initiated a cancel before shipping.
+// Refund timing matches Stripe's standard window (5–10 business days).
+// ---------------------------------------------------------------------------
+interface OrderCancellationEmailData {
+    customerEmail: string;
+    customerName: string;
+    orderId: string;
+    refundAmount: number;
+    paymentCaptured: boolean; // true if money was charged; false if only authorised
+}
+
+export async function sendOrderCancellationEmail(data: OrderCancellationEmailData) {
+    const { customerEmail, customerName, orderId, refundAmount, paymentCaptured } = data;
+    const refundLine = paymentCaptured
+        ? `<p style="color: ${INK_SOFT};">A full refund of <strong>£${refundAmount.toFixed(2)}</strong> has been issued to your original payment method. It usually appears within 5&ndash;10 business days, depending on your bank.</p>`
+        : `<p style="color: ${INK_SOFT};">No charge was taken &mdash; we&apos;ve released the pending authorisation on your card. If you saw the amount on your statement it should disappear within a few business days.</p>`;
+    const inner = `
+        <p style="font-size: 16px;">Hi ${escapeHtml(customerName)},</p>
+        <p style="color: ${INK_SOFT};">Your order <strong>#${escapeHtml(orderId)}</strong> has been cancelled as requested.</p>
+        ${refundLine}
+        <p style="color: ${INK_SOFT};">We&apos;re sorry to see this one go. If we got something wrong, or if you&apos;d like recommendations next time, just reply to this email &mdash; we&apos;d love the feedback.</p>
+        <p style="color: ${INK_MUTE}; font-size: 14px;">Questions? Reply to this email or write to us at ${BRAND.contact.email}.</p>
+    `;
+    try {
+        const { data: result, error } = await getResend().emails.send({
+            from: buildFrom(),
+            replyTo: BRAND.contact.email,
+            to: customerEmail,
+            subject: `Order cancelled · ${orderId} · ${BRAND.name}`,
+            html: emailShell(inner),
+        });
+        if (error) {
+            console.error("Failed to send order cancellation email:", error);
+            return { success: false, error };
+        }
+        return { success: true, messageId: result?.id };
+    } catch (error) {
+        console.error("Failed to send order cancellation email:", error);
+        return { success: false, error };
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Refund confirmation email
 // ---------------------------------------------------------------------------
 interface RefundConfirmationEmailData {
