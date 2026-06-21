@@ -5,6 +5,8 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # Allows running the suite manually from the Actions tab → "Tests" → "Run workflow".
+  workflow_dispatch:
 
 jobs:
   unit-tests:
