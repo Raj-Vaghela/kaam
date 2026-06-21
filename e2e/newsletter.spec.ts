@@ -45,8 +45,9 @@ test.describe('Newsletter signup', () => {
     await page.getByRole('button', { name: 'Subscribe' }).click()
     await first
 
-    // Wait for "Thanks!" to revert before second submission
-    await expect(page.getByRole('button', { name: 'Subscribe' })).toBeVisible({ timeout: 5_000 })
+    // Wait for "Sent!" button label to revert to "Subscribe" — Footer.tsx flips
+    // back via a 5000ms setTimeout, so 5s is racy; allow buffer.
+    await expect(page.getByRole('button', { name: 'Subscribe' })).toBeVisible({ timeout: 8_000 })
 
     // Second submission with same email. The GDPR-compliant route returns 200 with
     // the same neutral success message regardless of whether the email is already

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import Stripe from "stripe";
 import { CartItem } from "@/types";
@@ -15,6 +16,28 @@ function getStripe(): Stripe {
         });
     }
     return _stripe;
+}
+
+// Service-role client for trusted server-side writes/reads of orders and
+// order_items. The 20260603 RLS tightening removed guest_token-based read
+// policies and admin-only write policies; legitimate server actions
+// must use service-role and enforce authorization in code (user_id / guest_token
+// equality checks in the WHERE clause).
+//
+// Typed as `any` because the project does not generate a Database type;
+// matching the inline pattern in src/app/api/webhooks/stripe/route.ts.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _serviceClient: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getServiceClient(): any {
+    if (!_serviceClient) {
+        _serviceClient = createSupabaseClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            { auth: { persistSession: false } }
+        );
+    }
+    return _serviceClient;
 }
 
 // =============================================
@@ -285,8 +308,13 @@ export async function createPaymentIntent({ cart, email, promoCode }: CreatePaym
 
     const guestToken = user ? null : crypto.randomUUID();
 
+    // Switch to service-role for order writes — guest order rows are not
+    // readable under the new RLS, so the implicit RETURNING from .select()
+    // would otherwise yield zero rows even on a successful insert.
+    const supabaseSvc = getServiceClient();
+
     // Create pending order — address will be filled in pre-confirm
-    const { data: order, error: orderError } = await supabase
+    const { data: order, error: orderError } = await supabaseSvc
         .from("orders")
         .insert({
             user_id: user?.id || null,
@@ -315,9 +343,9 @@ export async function createPaymentIntent({ cart, email, promoCode }: CreatePaym
         unit_price: unitPrice,
     }));
 
-    const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+    const { error: itemsError } = await supabaseSvc.from("order_items").insert(orderItems);
     if (itemsError) {
-        await supabase.from("orders").delete().eq("id", order.id);
+        await supabaseSvc.from("orders").delete().eq("id", order.id);
         return { success: false, error: "Failed to create order items" };
     }
 
@@ -338,7 +366,7 @@ export async function createPaymentIntent({ cart, email, promoCode }: CreatePaym
             description: `GajjuExpress order ${order.id.slice(0, 8).toUpperCase()}`,
         });
 
-        await supabase
+        await supabaseSvc
             .from("orders")
             .update({ stripe_session_id: paymentIntent.id })
             .eq("id", order.id);
@@ -359,8 +387,8 @@ export async function createPaymentIntent({ cart, email, promoCode }: CreatePaym
             discountAmount,
         };
     } catch (err: unknown) {
-        await supabase.from("order_items").delete().eq("order_id", order.id);
-        await supabase.from("orders").delete().eq("id", order.id);
+        await supabaseSvc.from("order_items").delete().eq("order_id", order.id);
+        await supabaseSvc.from("orders").delete().eq("id", order.id);
         console.error("Stripe error:", err);
         const message = err instanceof Error ? err.message : "Unknown error";
         return { success: false, error: message };
@@ -386,8 +414,11 @@ export async function updateOrderShipping(
         data: { user },
     } = await supabase.auth.getUser();
 
-    // Build authorization query: must be the order owner or verified guest
-    let query = supabase
+    // Authorization is enforced by the WHERE clause (user_id or guest_token match)
+    // rather than RLS. Service-role is required because the tightened RLS no longer
+    // allows guests to UPDATE or read back their own order row.
+    const supabaseSvc = getServiceClient();
+    let query = supabaseSvc
         .from("orders")
         .update({
             shipping_address: shipping,
@@ -415,12 +446,14 @@ export async function updateOrderShipping(
 // ORDER LOOKUP (FOR GUESTS)
 // =============================================
 export async function getOrderByToken(token: string) {
+    // Direct SELECT on orders by guest_token is no longer permitted under the
+    // tightened RLS (20260603000001). Route through the SECURITY DEFINER RPC
+    // get_order_by_token() which validates the token server-side and returns
+    // only the row matching it (never an anonymised order).
     const supabase = await createClient();
-    const { data: order, error } = await supabase
-        .from("orders")
-        .select(`*, order_items (*)`)
-        .eq("guest_token", token)
-        .single();
+    const { data: order, error } = await supabase.rpc("get_order_by_token", {
+        p_token: token,
+    });
 
     if (error || !order) return { success: false, error: "Order not found" };
     return { success: true, order };
@@ -439,7 +472,11 @@ export async function linkGuestOrdersToAccount(_email: string) {
     if (!user) return { success: false, error: "Must be logged in" };
     if (!user.email) return { success: false, error: "Account email unavailable" };
 
-    const { error } = await supabase
+    // Service-role required: under the new RLS, only admins can UPDATE orders.
+    // Authorization here is enforced by matching guest_email against the verified
+    // session email (user.email), which the caller cannot tamper with.
+    const supabaseSvc = getServiceClient();
+    const { error } = await supabaseSvc
         .from("orders")
         .update({
             user_id: user.id,
