@@ -83,21 +83,26 @@ export default function DeliveryPage() {
                 </section>
 
                 <section>
-                    <h2 className="font-display text-2xl text-ink mb-3">Our carriers</h2>
+                    <h2 className="font-display text-2xl text-ink mb-3">Our carrier</h2>
                     <p>
-                        We use <strong>Royal Mail</strong> and <strong>DPD</strong> to fulfil
-                        deliveries. Once your order is dispatched you will receive a shipping
-                        confirmation email. Tracking information (where available) will be
-                        included in that email.
+                        We use <strong>Evri</strong> (formerly Hermes UK) to fulfil deliveries
+                        across the UK. Once your order is dispatched you will receive a shipping
+                        confirmation email with a tracking link.
                     </p>
                     <ul className="list-disc pl-6 space-y-2">
                         <li>
-                            <strong>Royal Mail:</strong> used for smaller parcels and standard
-                            deliveries.
+                            <strong>Tracking:</strong> Evri sends updates when your parcel is
+                            collected, on the way, and out for delivery. You can also track at any
+                            time using the link in your confirmation email.
                         </li>
                         <li>
-                            <strong>DPD:</strong> used for larger or heavier orders. DPD will send
-                            you a 1-hour delivery window notification on the morning of delivery.
+                            <strong>Delivery window:</strong> on the day of delivery Evri will
+                            usually send an estimated arrival window.
+                        </li>
+                        <li>
+                            <strong>Safe place:</strong> Evri will leave parcels in a nominated
+                            safe place if you set one. Otherwise they will attempt redelivery or
+                            leave a card.
                         </li>
                     </ul>
                 </section>

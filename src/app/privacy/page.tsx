@@ -101,6 +101,9 @@ export default function PrivacyPolicyPage() {
                         <li>
                             <strong>Account data:</strong> name, email address, hashed password
                             (we never see your plaintext password), account creation date.
+                            If you sign in with Google, we receive your email address and basic
+                            profile (full name) from Google in place of a password — never your
+                            Google contacts, files, or any other Google data.
                         </li>
                         <li>
                             <strong>Order and transaction data:</strong> delivery address, phone
@@ -239,6 +242,14 @@ export default function PrivacyPolicyPage() {
                                     <td className="p-3">Parcel delivery</td>
                                     <td className="p-3">UK</td>
                                     <td className="p-3">UK domestic</td>
+                                </tr>
+                                <tr>
+                                    <td className="p-3">
+                                        <a href="https://policies.google.com/privacy" className="text-accent underline" target="_blank" rel="noopener noreferrer">Google</a>
+                                    </td>
+                                    <td className="p-3">Sign-in identity verification (only when you choose &ldquo;Sign in with Google&rdquo;)</td>
+                                    <td className="p-3">EU/US</td>
+                                    <td className="p-3">UK IDTA / SCCs</td>
                                 </tr>
                                 <tr>
                                     <td className="p-3">

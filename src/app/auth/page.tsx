@@ -8,7 +8,7 @@ import { Mail, Lock, User, ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react"
 import Image from "next/image";
 import { BRAND } from "@/lib/brand";
 
-type AuthMode = "signin" | "signup" | "forgot";
+type AuthMode = "signin" | "signup" | "forgot" | "magic";
 
 export default function AuthPage() {
     return (
@@ -47,6 +47,33 @@ function AuthPageInner() {
         setConfirmPassword("");
         setShowPassword(false);
         setShowConfirmPassword(false);
+    };
+
+    const handleGoogleSignIn = async () => {
+        setError("");
+        setMessage("");
+        setLoading(true);
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`,
+                    // Request the minimum scopes — Google's OAuth consent screen will only ask
+                    // for what we need. Per GDPR data-minimization (Art. 5).
+                    scopes: "openid email profile",
+                },
+            });
+            if (error) {
+                console.error("[auth] google sign-in error:", error);
+                setError("Couldn't start Google sign-in. Please try again or use email instead.");
+                setLoading(false);
+            }
+            // On success the browser navigates to Google — no setLoading(false) here.
+        } catch (err) {
+            console.error("[auth] unexpected error during google sign-in:", err);
+            setError("Something went wrong. Please try again.");
+            setLoading(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -102,7 +129,7 @@ function AuthPageInner() {
                     return;
                 }
                 setMessage("Check your email for the confirmation link!");
-            } else {
+            } else if (mode === "forgot") {
                 const { error } = await supabase.auth.resetPasswordForEmail(email, {
                     redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset`,
                 });
@@ -116,6 +143,26 @@ function AuthPageInner() {
                     return;
                 }
                 setMessage("If that email is registered, we've sent a reset link. Check your inbox.");
+            } else {
+                // mode === "magic" — passwordless sign-in via emailed one-time link.
+                const { error } = await supabase.auth.signInWithOtp({
+                    email,
+                    options: {
+                        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`,
+                    },
+                });
+                if (error) {
+                    const msg = error.message?.toLowerCase() ?? "";
+                    if (msg.includes("rate")) {
+                        setError("Too many requests. Please wait a minute and try again.");
+                    } else if (msg.includes("invalid") || msg.includes("email")) {
+                        setError("That email address doesn't look valid. Please check and try again.");
+                    } else {
+                        setError("Couldn't send the sign-in link. Please try again in a moment.");
+                    }
+                    return;
+                }
+                setMessage(`Check your inbox at ${email} — we've sent a one-click sign-in link.`);
             }
         } catch (err) {
             console.error("[auth] unexpected error during sign-in/up:", err);
@@ -128,24 +175,31 @@ function AuthPageInner() {
     const isLogin = mode === "signin";
     const isSignup = mode === "signup";
     const isForgot = mode === "forgot";
+    const isMagic = mode === "magic";
 
     const heading = isForgot
         ? "Reset your password"
-        : isLogin
-            ? "Welcome back"
-            : "Create your account";
+        : isMagic
+            ? "Sign in without a password"
+            : isLogin
+                ? "Welcome back"
+                : "Create your account";
 
     const subheading = isForgot
         ? "Enter your email and we'll send you a link to reset it."
-        : isLogin
-            ? "Sign in to pick up where you left off."
-            : "Start your pantry journey with us.";
+        : isMagic
+            ? "Type your email — we'll send you a one-click sign-in link."
+            : isLogin
+                ? "Sign in to pick up where you left off."
+                : "Start your pantry journey with us.";
 
     const submitLabel = isForgot
         ? "Send reset link"
-        : isLogin
-            ? "Sign In"
-            : "Create Account";
+        : isMagic
+            ? "Send sign-in link"
+            : isLogin
+                ? "Sign In"
+                : "Create Account";
 
     return (
         <div className="min-h-screen flex bg-cream">
@@ -190,7 +244,7 @@ function AuthPageInner() {
                         <p className="text-ink-mute">{subheading}</p>
                     </div>
 
-                    {!isForgot && (
+                    {!isForgot && !isMagic && (
                         <div className="flex p-1 bg-cream-soft border border-cream-deep rounded-full mb-6">
                             <button
                                 type="button"
@@ -249,7 +303,7 @@ function AuthPageInner() {
                             </div>
                         </div>
 
-                        {!isForgot && (
+                        {!isForgot && !isMagic && (
                             <div>
                                 <div className="flex items-center justify-between mb-1.5">
                                     <label className="block text-xs font-semibold text-ink-soft uppercase tracking-wider">Password</label>
@@ -328,7 +382,7 @@ function AuthPageInner() {
                             {submitLabel}
                         </button>
 
-                        {isForgot && (
+                        {(isForgot || isMagic) && (
                             <button
                                 type="button"
                                 onClick={() => switchMode("signin")}
@@ -338,6 +392,51 @@ function AuthPageInner() {
                             </button>
                         )}
                     </form>
+
+                    {/* Social / passwordless entry points — only on sign-in or sign-up,
+                        not on forgot/magic flows. Order: Google first (most familiar),
+                        then magic link as the no-password alternative for older / less
+                        technical users. */}
+                    {(isLogin || isSignup) && (
+                        <div className="mt-5">
+                            <div className="relative my-4">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-cream-deep"></div>
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase tracking-wider">
+                                    <span className="bg-cream px-3 text-ink-mute">or</span>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleGoogleSignIn}
+                                disabled={loading}
+                                className="w-full py-3.5 text-sm font-semibold text-ink bg-white border border-cream-deep hover:border-ink-mute rounded-2xl transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
+                            >
+                                {/* Google "G" logomark — required by Google's branding guidelines */}
+                                <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
+                                    <path fill="#FBBC04" d="M5.84 14.09a6.61 6.61 0 0 1 0-4.18V7.07H2.18a11 11 0 0 0 0 9.86l3.66-2.84z"/>
+                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1a11 11 0 0 0-9.82 6.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
+                                </svg>
+                                Continue with Google
+                            </button>
+
+                            {isLogin && (
+                                <button
+                                    type="button"
+                                    onClick={() => switchMode("magic")}
+                                    disabled={loading}
+                                    className="mt-3 w-full py-3.5 text-sm font-semibold text-accent bg-accent-soft hover:bg-accent hover:text-white rounded-2xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    <Mail size={16} />
+                                    Email me a sign-in link
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     <p className="mt-8 text-center text-xs text-ink-mute">
                         By continuing, you agree to our{" "}
