@@ -122,6 +122,7 @@ export async function sendOrderConfirmation(data: OrderEmailData) {
     try {
         const { data: result, error } = await getResend().emails.send({
             from: buildFrom(),
+            replyTo: BRAND.contact.email,
             to: customerEmail,
             subject: `Order confirmed · ${orderId} · ${BRAND.name}`,
             html: emailShell(inner),
@@ -156,6 +157,7 @@ export async function sendPaymentProcessingEmail(data: PaymentProcessingEmailDat
     try {
         const { data: result, error } = await getResend().emails.send({
             from: buildFrom(),
+            replyTo: BRAND.contact.email,
             to: customerEmail,
             subject: `Payment processing · ${orderId} · ${BRAND.name}`,
             html: emailShell(inner),
@@ -193,6 +195,7 @@ export async function sendRefundConfirmationEmail(data: RefundConfirmationEmailD
     try {
         const { data: result, error } = await getResend().emails.send({
             from: buildFrom(),
+            replyTo: BRAND.contact.email,
             to: customerEmail,
             subject: `Refund issued · ${orderId} · ${BRAND.name}`,
             html: emailShell(inner),
@@ -237,6 +240,7 @@ export async function sendShippingDispatched(data: ShippingDispatchedEmailData) 
     try {
         const { data: result, error } = await getResend().emails.send({
             from: buildFrom(),
+            replyTo: BRAND.contact.email,
             to: customerEmail,
             subject: `Dispatched · ${orderId} · ${BRAND.name}`,
             html: emailShell(inner),
@@ -269,6 +273,7 @@ export async function sendAdminDisputeAlert(data: AdminAlertEmailData) {
     try {
         const { data: result, error } = await getResend().emails.send({
             from: buildFrom(`${BRAND.name} Alerts`),
+            replyTo: BRAND.contact.email,
             to: adminEmail,
             subject,
             html: emailShell(inner),
@@ -313,6 +318,7 @@ export async function sendAccountCreationInvite(data: AccountCreationEmailData) 
     try {
         const { data: result, error } = await getResend().emails.send({
             from: buildFrom(),
+            replyTo: BRAND.contact.email,
             to: customerEmail,
             subject: `Create your ${BRAND.name} account`,
             html: emailShell(inner),
@@ -360,6 +366,7 @@ export async function sendNewsletterConfirmation(data: NewsletterConfirmEmailDat
     try {
         const { data: result, error } = await getResend().emails.send({
             from: buildFrom(),
+            replyTo: BRAND.contact.email,
             to: email,
             subject: `Confirm your ${BRAND.name} newsletter subscription`,
             html: emailShell(inner),
@@ -404,6 +411,7 @@ export async function sendNewsletterWelcome(data: NewsletterWelcomeEmailData) {
     try {
         const { data: result, error } = await getResend().emails.send({
             from: buildFrom(),
+            replyTo: BRAND.contact.email,
             to: email,
             subject: `Welcome to ${BRAND.name}`,
             html: emailShell(inner),
