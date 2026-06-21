@@ -12,6 +12,9 @@ dist/
 # Testing
 coverage/
 
+# Pre-launch secrets staging file (paste-to-Vercel notes — NEVER commit)
+launch-secrets.local.md
+
 # Environment files
 .env
 .env.local
