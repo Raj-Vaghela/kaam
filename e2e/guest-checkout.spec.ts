@@ -20,9 +20,16 @@ test.describe('Guest checkout', () => {
 
     expect(product).not.toBeNull()
 
-    // addInitScript runs before EVERY navigation (including HMR reloads) — most reliable cart seed
+    // addInitScript runs before EVERY navigation (including HMR reloads) — most reliable cart seed.
+    // Storage key/shape for consent must match ConsentContext.STORAGE_KEY = "gx_consent_v1".
     await page.addInitScript((cartItem) => {
-      localStorage.setItem('cookie-consent-v2', 'accepted')
+      localStorage.setItem(
+        'gx_consent_v1',
+        JSON.stringify({
+          consent: { analytics: true, errorTracking: true },
+          hasDecided: true,
+        })
+      )
       localStorage.setItem('gajjuexpress-cart', JSON.stringify([cartItem]))
     }, {
       id: product!.id,
