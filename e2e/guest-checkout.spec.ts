@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { getOrderByEmail, deleteOrdersByEmail, getServiceClient } from './helpers/db'
+import { getOrderByEmail, deleteOrdersByEmail, getServiceClient, markOrderPaidByEmail } from './helpers/db'
 import { TEST_PRODUCTS } from './global-setup'
 
 const guestEmail = `guest+${Date.now()}@test.gajjuexpress`
@@ -104,6 +104,13 @@ test.describe('Guest checkout', () => {
 
     // Assert redirect to /checkout/success with success message
     await page.waitForURL(/\/checkout\/success/, { timeout: 30_000 })
+
+    // Simulate the Stripe webhook flipping the order to 'paid' — the success
+    // page polls getOrderByToken until status === 'paid' or 'payment_received'
+    // and only then shows the dhanyavaad heading. In CI Stripe cannot reach
+    // the runner so the real webhook never arrives.
+    await markOrderPaidByEmail(guestEmail)
+
     await expect(page.getByRole('heading', { name: /Bahot bahot dhanyavaad/i })).toBeVisible({ timeout: 15_000 })
 
     // Assert order exists in DB

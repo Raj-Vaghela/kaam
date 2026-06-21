@@ -85,3 +85,18 @@ export async function deleteProductByName(name: string) {
   const db = getServiceClient()
   await db.from('products').delete().eq('name', name)
 }
+
+// Simulate the Stripe webhook setting an order to 'paid'. In CI there is no
+// tunnel from Stripe → the runner, so the real webhook never arrives and the
+// success page polls forever in 'Confirming your order…' state. The webhook
+// itself has unit-test coverage (webhook-idempotency.test.ts) so these
+// E2E flows only need the resulting DB state.
+export async function markOrderPaidByEmail(email: string) {
+  const db = getServiceClient()
+  await db.from('orders').update({ status: 'paid' }).eq('guest_email', email)
+}
+
+export async function markOrderPaidByUserId(userId: string) {
+  const db = getServiceClient()
+  await db.from('orders').update({ status: 'paid' }).eq('user_id', userId)
+}
