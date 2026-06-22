@@ -424,3 +424,168 @@ export async function approveReturn(formData: FormData): Promise<ActionResult> {
     revalidatePath(`/admin/orders/${orderId}`);
     return { ok: true };
 }
+
+/**
+ * Regenerate an invoice for an order whose webhook either errored before
+ * creating one or where the storage upload failed mid-flight. Mirrors the
+ * happy-path of handlePaymentIntentSucceeded() in the Stripe webhook.
+ *
+ * Safe to call on any paid+ order: short-circuits if an invoice already
+ * exists (idempotent via the UNIQUE (order_id) constraint on invoices).
+ */
+export async function regenerateInvoice(orderId: string): Promise<ActionResult> {
+    if (!orderId) return { ok: false, error: "Missing orderId" };
+
+    const { supabase, authorized } = await getAdminUser();
+    if (!authorized) return { ok: false, error: "Unauthorised" };
+
+    // Lazy-import the heavy modules so they're not pulled into other actions.
+    const { generateInvoiceNumber, storeConfig, calculateVAT } = await import("@/lib/invoice");
+    const { generateInvoicePDF, getInvoiceFilename } = await import("@/lib/pdf");
+
+    // 1. Fetch order with line items.
+    const { data: order, error: fetchError } = await supabase
+        .from("orders")
+        .select(
+            "id, status, guest_email, shipping_address, billing_address, invoice_id, order_items (product_name, quantity, unit_price)"
+        )
+        .eq("id", orderId)
+        .single();
+
+    if (fetchError || !order) {
+        return { ok: false, error: "Order not found" };
+    }
+
+    // Pre-payment orders shouldn't have invoices yet.
+    const eligibleStatuses = ["paid", "shipped", "delivered", "refunded", "payment_processing"];
+    if (!eligibleStatuses.includes(order.status ?? "")) {
+        return {
+            ok: false,
+            error: `Cannot generate invoice while order is "${order.status}". Wait for payment to clear.`,
+        };
+    }
+
+    // 2. Short-circuit if invoice already exists (idempotent admin click).
+    if (order.invoice_id) {
+        return { ok: true };
+    }
+    const { data: existing } = await supabase
+        .from("invoices")
+        .select("id")
+        .eq("order_id", orderId)
+        .maybeSingle();
+    if (existing) {
+        await supabase.from("orders").update({ invoice_id: existing.id }).eq("id", orderId);
+        revalidatePath("/admin/invoices");
+        revalidatePath(`/admin/orders/${orderId}`);
+        return { ok: true };
+    }
+
+    // 3. Build invoice payload (mirrors webhook handler logic).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items = (order.order_items as any[] | null) ?? [];
+    const subtotal = items.reduce(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (sum: number, item: any) => sum + item.unit_price * item.quantity,
+        0
+    );
+    const { vatAmount, total } = calculateVAT(subtotal);
+
+    const invoiceNumber = generateInvoiceNumber();
+    const customerEmail = order.guest_email || "";
+    const customerName = order.shipping_address?.fullName || "Customer";
+    const billingAddress = order.billing_address || order.shipping_address || {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const invoiceItems = items.map((item: any) => ({
+        name: item.product_name,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        total: item.unit_price * item.quantity,
+    }));
+
+    // 4. PDF upload (non-fatal — invoice row still gets created even if PDF fails).
+    let pdfUrl: string | null = null;
+    try {
+        const pdfBuffer = generateInvoicePDF({
+            invoiceNumber,
+            date: new Date(),
+            customerName,
+            customerEmail,
+            billingAddress: {
+                line1: billingAddress?.addressLine1 || "",
+                line2: billingAddress?.addressLine2,
+                city: billingAddress?.city || "",
+                postcode: billingAddress?.postcode || "",
+            },
+            items: invoiceItems,
+            subtotal,
+            vatRate: storeConfig.vatRate,
+            vatAmount,
+            total,
+        });
+        const filename = getInvoiceFilename(invoiceNumber);
+        const { error: uploadError } = await supabase.storage
+            .from("invoices")
+            .upload(`${invoiceNumber}/${filename}`, pdfBuffer, {
+                contentType: "application/pdf",
+                upsert: true,
+            });
+        if (uploadError) {
+            console.error(`[regenerateInvoice] PDF upload failed for ${orderId}:`, uploadError.message);
+        } else {
+            pdfUrl = `${invoiceNumber}/${filename}`;
+        }
+    } catch (pdfError) {
+        console.error(`[regenerateInvoice] PDF generation failed for ${orderId}:`, pdfError);
+    }
+
+    // 5. Insert invoice row.
+    const { data: invoice, error: insertError } = await supabase
+        .from("invoices")
+        .insert({
+            invoice_number: invoiceNumber,
+            order_id: orderId,
+            customer_email: customerEmail,
+            customer_name: customerName,
+            billing_address: billingAddress,
+            items: invoiceItems,
+            subtotal,
+            vat_rate: storeConfig.vatRate,
+            vat_amount: vatAmount,
+            total,
+            pdf_url: pdfUrl,
+        })
+        .select("id")
+        .single();
+
+    if (insertError || !invoice) {
+        console.error(`[regenerateInvoice] Insert failed for ${orderId}:`, insertError?.message);
+        return {
+            ok: false,
+            error: insertError?.message || "Failed to create invoice",
+        };
+    }
+
+    // 6. Link order to invoice.
+    const { error: updateError } = await supabase
+        .from("orders")
+        .update({ invoice_id: invoice.id })
+        .eq("id", orderId);
+    if (updateError) {
+        console.error(`[regenerateInvoice] Order update failed for ${orderId}:`, updateError.message);
+    }
+
+    // 7. Audit log.
+    const { logAdminAction } = await import("@/lib/audit");
+    await logAdminAction(supabase, {
+        action: "invoice:regenerated",
+        resourceType: "order",
+        resourceId: orderId,
+        metadata: { invoiceNumber, invoiceId: invoice.id },
+    });
+
+    revalidatePath("/admin/invoices");
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${orderId}`);
+    return { ok: true };
+}

@@ -6,6 +6,7 @@ import { getStatusConfig } from "@/lib/order-status";
 import { calculateVAT } from "@/lib/invoice";
 import { UpdateStatusForm, UpdateTrackingForm, ReturnDecisionButtons } from "./AdminOrderForms";
 import GenerateLabelButton from "./GenerateLabelButton";
+import RegenerateInvoiceButton from "./RegenerateInvoiceButton";
 
 // Admin views must always reflect current DB state.
 export const dynamic = "force-dynamic";
@@ -367,22 +368,39 @@ export default async function AdminOrderDetailPage({
                         </div>
                     )}
 
-                    {/* Invoice link */}
-                    {order.invoice_id && (
-                        <div className="bg-cream-soft border border-cream-deep rounded-3xl p-6">
-                            <div className="flex items-center gap-2 mb-3">
-                                <FileText size={16} className="text-accent" />
-                                <h2 className="font-semibold text-ink text-sm uppercase tracking-wide">Invoice</h2>
+                    {/* Invoice section */}
+                    {(() => {
+                        const paidEnough = ["paid", "shipped", "delivered", "refunded", "payment_processing"].includes(
+                            order.status ?? ""
+                        );
+                        if (!paidEnough) return null;
+
+                        return (
+                            <div className="bg-cream-soft border border-cream-deep rounded-3xl p-6">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <FileText size={16} className="text-accent" />
+                                    <h2 className="font-semibold text-ink text-sm uppercase tracking-wide">Invoice</h2>
+                                </div>
+                                {order.invoice_id ? (
+                                    <Link
+                                        href="/admin/invoices"
+                                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline"
+                                    >
+                                        <FileText size={14} />
+                                        View invoice
+                                    </Link>
+                                ) : (
+                                    <>
+                                        <p className="text-xs text-ink-soft mb-3">
+                                            No invoice was generated for this order — likely the payment webhook
+                                            failed mid-way. Regenerate it now to keep the legal record complete.
+                                        </p>
+                                        <RegenerateInvoiceButton orderId={order.id} />
+                                    </>
+                                )}
                             </div>
-                            <Link
-                                href="/admin/invoices"
-                                className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline"
-                            >
-                                <FileText size={14} />
-                                View invoice
-                            </Link>
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
             </div>
         </div>

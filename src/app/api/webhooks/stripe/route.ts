@@ -255,6 +255,19 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
             .eq("id", orderId);
         if (updateError) console.error("Failed to update order status:", updateError);
         console.error(`Order ${orderId} paid but invoice creation failed — manual invoice follow-up required`);
+
+        // Alert admin asynchronously so the gap is visible, not silent.
+        // The admin order page also surfaces a "Generate invoice" button when invoice_id is null.
+        after(async () => {
+            const { sendAdminDisputeAlert } = await import("@/lib/email");
+            await sendAdminDisputeAlert({
+                subject: `[Action Required] Invoice creation failed — order ${orderId.slice(0, 8).toUpperCase()}`,
+                body:
+                    `Order ${orderId} was paid (£${total.toFixed(2)}) but no invoice was created.\n` +
+                    `Reason: ${invoiceError?.message ?? "unknown"}\n\n` +
+                    `Fix: open /admin/orders/${orderId} and click "Generate invoice".`,
+            }).catch((e: unknown) => console.error("Failed to send invoice-failure admin alert:", e));
+        });
         return;
     }
 
