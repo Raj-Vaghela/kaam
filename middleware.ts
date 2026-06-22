@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 const COOKIE_NAME = "site-access";
 
 const BYPASS_PREFIXES = [
-  "/gate",
   "/api/gate",
   "/api/webhooks",
   "/api/newsletter",
@@ -49,9 +48,10 @@ export function middleware(request: NextRequest) {
   const expectedToken = hashToken(password);
   if (cookie?.value === expectedToken) return NextResponse.next();
 
+  const next = pathname + (request.nextUrl.search || "");
   const gateUrl = request.nextUrl.clone();
-  gateUrl.pathname = "/gate";
-  gateUrl.searchParams.set("next", pathname);
+  gateUrl.pathname = "/api/gate";
+  gateUrl.searchParams.set("next", next);
   return NextResponse.redirect(gateUrl);
 }
 
