@@ -80,7 +80,7 @@ export const REGISTERED_ADDRESS_COUNTRY = optionalWithDefault("REGISTERED_ADDRES
 // These run at module-import time so a misconfigured deployment crashes loudly
 // rather than serving legally incomplete pages.
 
-if (process.env.NODE_ENV === "production") {
+if (process.env.NODE_ENV === "production" && typeof window === "undefined") {
     const prodRequired = [
         "COMPANY_NUMBER",
         "RESEND_DOMAIN",
