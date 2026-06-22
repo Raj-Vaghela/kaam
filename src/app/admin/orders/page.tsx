@@ -104,12 +104,17 @@ export default async function AdminOrdersPage({
     if (searchTerm) {
         // Search across order ID (first 8 chars), guest email, and shipping name.
         // PostgREST `.or()` takes a comma-separated list of filter expressions.
-        const sanitised = searchTerm.replace(/[(),]/g, "").trim();
+        // Strip the leading "#" admins may copy from the order-number label,
+        // plus PostgREST logic-tree delimiters.
+        const sanitised = searchTerm.replace(/[#(),]/g, "").trim();
         if (sanitised) {
-            // shipping_address is jsonb; ilike against the ->fullName extraction.
+            // id_text is a generated text mirror of the uuid (see migration
+            // add_orders_id_text_generated_column) so we can prefix-match the
+            // order number without casting inside .or(). shipping_address is
+            // jsonb; ilike against the ->fullName extraction.
             query = query.or(
                 [
-                    `id::text.ilike.${sanitised.toLowerCase()}%`,
+                    `id_text.ilike.${sanitised.toLowerCase()}%`,
                     `guest_email.ilike.%${sanitised}%`,
                     `shipping_address->>fullName.ilike.%${sanitised}%`,
                 ].join(",")
