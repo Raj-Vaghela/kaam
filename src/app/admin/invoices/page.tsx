@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getSignedInvoiceUrl } from "@/lib/invoice-url";
 import { FileText, Download, Mail, Calendar, User } from "lucide-react";
 
 // Admin views must always reflect current DB state.
@@ -23,6 +24,16 @@ export default async function AdminInvoicesPage() {
             </div>
         );
     }
+
+    // pdf_url stores a private-bucket path, not a web URL. Generate time-limited
+    // signed URLs so the "PDF" links resolve instead of 404ing.
+    const signedUrls = new Map<string, string | null>();
+    await Promise.all(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (invoices ?? []).map(async (inv: any) => {
+            signedUrls.set(inv.id, await getSignedInvoiceUrl(inv.pdf_url));
+        })
+    );
 
     return (
         <div>
@@ -92,9 +103,9 @@ export default async function AdminInvoicesPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center justify-end gap-2">
-                                            {invoice.pdf_url && (
+                                            {signedUrls.get(invoice.id) && (
                                                 <a
-                                                    href={invoice.pdf_url}
+                                                    href={signedUrls.get(invoice.id)!}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-accent bg-accent-soft rounded-full hover:bg-accent hover:text-white transition-colors"

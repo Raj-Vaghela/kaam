@@ -109,7 +109,7 @@ export default async function AdminOrdersPage({
             // shipping_address is jsonb; ilike against the ->fullName extraction.
             query = query.or(
                 [
-                    `id.ilike.${sanitised}%`,
+                    `id::text.ilike.${sanitised.toLowerCase()}%`,
                     `guest_email.ilike.%${sanitised}%`,
                     `shipping_address->>fullName.ilike.%${sanitised}%`,
                 ].join(",")

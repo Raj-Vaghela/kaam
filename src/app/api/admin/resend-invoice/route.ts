@@ -43,13 +43,13 @@ export async function POST(request: NextRequest) {
         const invoiceId = formData.get("invoiceId") as string;
 
         if (!invoiceId) {
-            return NextResponse.redirect(new URL("/admin/invoices?error=missing_id", request.url));
+            return NextResponse.redirect(new URL("/admin/invoices?error=missing_id", request.url), { status: 303 });
         }
 
         // Rate limit: 3 resends per invoice per hour
         const rl = await rateLimit(`resend:${invoiceId}`, 3, 60 * 60 * 1000);
         if (!rl.allowed) {
-            return NextResponse.redirect(new URL("/admin/invoices?error=rate_limited", request.url));
+            return NextResponse.redirect(new URL("/admin/invoices?error=rate_limited", request.url), { status: 303 });
         }
 
         // Fetch invoice with order details
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
         if (invoiceError || !invoice) {
             console.error("Invoice not found:", invoiceError?.message);
-            return NextResponse.redirect(new URL("/admin/invoices?error=not_found", request.url));
+            return NextResponse.redirect(new URL("/admin/invoices?error=not_found", request.url), { status: 303 });
         }
 
         // Send the email
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
         if (!result.success) {
             console.error("Failed to send email");
-            return NextResponse.redirect(new URL("/admin/invoices?error=email_failed", request.url));
+            return NextResponse.redirect(new URL("/admin/invoices?error=email_failed", request.url), { status: 303 });
         }
 
         // Audit log (runs under caller's session via SECURITY DEFINER RPC)
@@ -101,9 +101,9 @@ export async function POST(request: NextRequest) {
             resourceId: invoiceId,
         });
 
-        return NextResponse.redirect(new URL("/admin/invoices?success=resent", request.url));
+        return NextResponse.redirect(new URL("/admin/invoices?success=resent", request.url), { status: 303 });
     } catch {
         console.error("Resend invoice error");
-        return NextResponse.redirect(new URL("/admin/invoices?error=unknown", request.url));
+        return NextResponse.redirect(new URL("/admin/invoices?error=unknown", request.url), { status: 303 });
     }
 }
