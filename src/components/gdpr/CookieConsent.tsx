@@ -143,10 +143,10 @@ function MainView({ onAcceptAll, onRejectAll, onCustomize, defaultFocusRef }: Ma
                 className="text-sm text-[#6b6355] mb-4 leading-relaxed"
             >
                 We use essential cookies to keep you signed in and to process orders
-                securely. With your consent, we also use{" "}
-                <strong>Vercel Analytics</strong> (anonymised page views) and{" "}
-                <strong>Sentry</strong> (error tracking with masked recordings — no
-                personal details are captured). You can change your choice at any time.{" "}
+                securely. With your consent, we also collect{" "}
+                <strong>anonymised page views</strong> to improve our site and use{" "}
+                <strong>error monitoring</strong> to fix problems quickly — no
+                personal details are captured. You can change your choice at any time.{" "}
                 <Link
                     href="/privacy"
                     className="text-[#b45309] underline underline-offset-2 hover:text-[#92400e] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b45309] rounded-sm"
@@ -262,8 +262,8 @@ function CustomizeView({
                     id="consent-analytics"
                     checked={draftAnalytics}
                     onChange={onChangeAnalytics}
-                    label="Analytics (Vercel)"
-                    description="Anonymised page-view counts. No personal data is collected."
+                    label="Analytics"
+                    description="Anonymised page-view counts to help us improve the site. No personal data is collected."
                 />
 
                 {/* Error tracking toggle */}
@@ -271,8 +271,8 @@ function CustomizeView({
                     id="consent-error-tracking"
                     checked={draftErrorTracking}
                     onChange={onChangeErrorTracking}
-                    label="Error tracking (Sentry)"
-                    description="Captures errors with masked recordings. All text and inputs are hidden before upload."
+                    label="Error monitoring"
+                    description="Helps us detect and fix problems quickly. All text and inputs are masked before any data is sent."
                 />
             </fieldset>
 
