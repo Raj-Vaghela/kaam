@@ -4,7 +4,11 @@
  * Routing decision tree:
  *
  *   Request
- *    ├─ Admin subdomain (ops.gajjuexpress.co.uk) OR /admin/* in dev
+ *    ├─ Site password gate (when SITE_PASSWORD is set) — blocks the whole site
+ *    │   behind a password until launch. Bypassed for the gate route, auth
+ *    │   callback, newsletter links, and static assets.
+ *    ├─ Admin subdomain (ops.gajjuexpress.co.uk), /admin/* in dev, OR when
+ *    │   ADMIN_ALLOW_MAIN_DOMAIN=true (testing on a preview domain)
  *    │   ├─ GET /admin/auth
  *    │   │   ├─ Logged-in admin/staff  → redirect to /admin
  *    │   │   ├─ Logged-in non-admin   → redirect to / (silently)
@@ -20,15 +24,61 @@
  *        └─ /admin/* in production    → redirect to / (blocks direct access)
  *
  * Session is refreshed on every request so expired tokens are rotated.
- * The matcher excludes _next assets and the Stripe webhook to keep cold-start
- * latency off static files and signature-verified ingress.
  */
 
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { safeRedirect } from "@/lib/security/redirect";
 
+const GATE_COOKIE = "site-access";
+
+// FNV-1a hash so the access cookie is tied to the current password — rotating
+// SITE_PASSWORD invalidates every previously issued cookie.
+function hashToken(password: string): string {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < password.length; i++) {
+        h ^= password.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+    }
+    return (h >>> 0).toString(36);
+}
+
+const GATE_BYPASS = [
+    "/api/gate",
+    "/api/newsletter",
+    "/auth/callback",
+    "/auth/signout",
+    "/unsubscribe",
+    "/monitoring",
+];
+
 export async function proxy(request: NextRequest) {
+    const pathname = request.nextUrl.pathname;
+
+    // ── Site password gate ──────────────────────────────────────────────────
+    const sitePassword = process.env.SITE_PASSWORD;
+    if (sitePassword) {
+        const bypass =
+            GATE_BYPASS.some((p) => pathname.startsWith(p)) ||
+            /\.(ico|png|jpg|jpeg|svg|webp|gif|css|js|map|woff2?|ttf|eot|xml|txt|json)$/.test(
+                pathname
+            );
+
+        if (!bypass) {
+            const cookie = request.cookies.get(GATE_COOKIE);
+            if (cookie?.value !== hashToken(sitePassword)) {
+                const url = request.nextUrl.clone();
+                url.pathname = "/api/gate";
+                url.search = "";
+                url.searchParams.set(
+                    "next",
+                    pathname + (request.nextUrl.search || "")
+                );
+                return NextResponse.redirect(url);
+            }
+        }
+    }
+
     let supabaseResponse = NextResponse.next({ request });
 
     // Supabase SSR client — refreshes session cookies on every request
@@ -58,16 +108,20 @@ export async function proxy(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser();
 
-    const pathname = request.nextUrl.pathname;
     const hostname = request.headers.get("host") || "";
 
     // ── Admin routing ─────────────────────────────────────────────────────────
     // Production: only ops.gajjuexpress.co.uk can reach admin routes.
     // Development: /admin/* paths on localhost are treated as the admin subdomain.
+    // Testing: set ADMIN_ALLOW_MAIN_DOMAIN=true to reach /admin on a preview
+    // domain (e.g. *.vercel.app) before the ops. subdomain is configured.
     const isDev = process.env.NODE_ENV === "development";
+    const allowAdminOnMainDomain =
+        process.env.ADMIN_ALLOW_MAIN_DOMAIN === "true";
+    const isAdminArea = pathname.startsWith("/admin");
     const isAdminSubdomain =
         hostname.startsWith("ops.") ||
-        (isDev && pathname.startsWith("/admin"));
+        ((isDev || allowAdminOnMainDomain) && isAdminArea);
 
     if (isAdminSubdomain) {
         if (pathname === "/admin/auth") {
@@ -82,10 +136,14 @@ export async function proxy(request: NextRequest) {
                 if (profile?.role === "admin" || profile?.role === "staff") {
                     const url = request.nextUrl.clone();
                     url.pathname = "/admin";
+                    url.search = "";
                     return NextResponse.redirect(url);
                 }
                 // Non-admin user — send to retail without revealing admin exists
-                return NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"));
+                const url = request.nextUrl.clone();
+                url.pathname = "/";
+                url.search = "";
+                return NextResponse.redirect(url);
             }
             // Unauthenticated — show the login form
             return supabaseResponse;
@@ -95,6 +153,7 @@ export async function proxy(request: NextRequest) {
         if (!user) {
             const url = request.nextUrl.clone();
             url.pathname = "/admin/auth";
+            url.search = "";
             return NextResponse.redirect(url);
         }
 
@@ -106,7 +165,10 @@ export async function proxy(request: NextRequest) {
 
         if (profile?.role !== "admin" && profile?.role !== "staff") {
             // Silently redirect to retail — no indication admin panel exists
-            return NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"));
+            const url = request.nextUrl.clone();
+            url.pathname = "/";
+            url.search = "";
+            return NextResponse.redirect(url);
         }
 
         return supabaseResponse;
@@ -138,9 +200,10 @@ export async function proxy(request: NextRequest) {
     }
 
     // Block direct /admin/* access on the retail domain in production
-    if (!isDev && pathname.startsWith("/admin")) {
+    if (!isDev && !allowAdminOnMainDomain && isAdminArea) {
         const url = request.nextUrl.clone();
         url.pathname = "/";
+        url.search = "";
         return NextResponse.redirect(url);
     }
 

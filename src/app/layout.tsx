@@ -28,7 +28,10 @@ const hindVadodara = Hind_Vadodara({
     display: "swap",
 });
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://gajjuexpress.co.uk";
+const RAW_APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://gajjuexpress.co.uk";
+// Tolerate NEXT_PUBLIC_APP_URL set without a protocol (e.g. "example.vercel.app")
+// so the build's new URL() calls don't throw "Invalid URL".
+const APP_URL = /^https?:\/\//.test(RAW_APP_URL) ? RAW_APP_URL : `https://${RAW_APP_URL}`;
 
 export const metadata: Metadata = {
     // Required for resolving relative OG/Twitter image URLs
