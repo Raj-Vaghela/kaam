@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 const COOKIE_NAME = "site-access";
 
@@ -25,11 +26,32 @@ function hashToken(password: string): string {
   return (h >>> 0).toString(36);
 }
 
-export function middleware(request: NextRequest) {
-  const password = process.env.SITE_PASSWORD;
+async function refreshSupabaseSession(request: NextRequest, response: NextResponse) {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value),
+          );
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options),
+          );
+        },
+      },
+    },
+  );
 
-  if (!password) return NextResponse.next();
+  await supabase.auth.getUser();
+  return response;
+}
 
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (BYPASS_PREFIXES.some((p) => pathname.startsWith(p))) {
@@ -44,15 +66,22 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const cookie = request.cookies.get(COOKIE_NAME);
-  const expectedToken = hashToken(password);
-  if (cookie?.value === expectedToken) return NextResponse.next();
+  const password = process.env.SITE_PASSWORD;
 
-  const next = pathname + (request.nextUrl.search || "");
-  const gateUrl = request.nextUrl.clone();
-  gateUrl.pathname = "/api/gate";
-  gateUrl.searchParams.set("next", next);
-  return NextResponse.redirect(gateUrl);
+  if (password) {
+    const cookie = request.cookies.get(COOKIE_NAME);
+    const expectedToken = hashToken(password);
+    if (cookie?.value !== expectedToken) {
+      const next = pathname + (request.nextUrl.search || "");
+      const gateUrl = request.nextUrl.clone();
+      gateUrl.pathname = "/api/gate";
+      gateUrl.searchParams.set("next", next);
+      return NextResponse.redirect(gateUrl);
+    }
+  }
+
+  const response = NextResponse.next({ request });
+  return refreshSupabaseSession(request, response);
 }
 
 export const config = {
