@@ -43,15 +43,10 @@ function gatePageHtml(next: string, error?: string): Response {
 </head>
 <body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#134048;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;padding:24px;box-sizing:border-box">
   <div style="width:100%;max-width:480px;text-align:center">
-    <img src="/gajjuexpress-logo-h-white.png" alt="GajjuExpress" width="220" style="max-width:220px;height:auto;margin:0 auto 40px;display:block"/>
+    <img id="logo" src="/gajjuexpress-logo-h-white.png" alt="GajjuExpress" width="220" style="max-width:220px;height:auto;margin:0 auto 40px;display:block;user-select:none;-webkit-user-select:none"/>
     <h1 style="font-size:2.5rem;font-weight:700;color:#f5f0e6;margin:0 0 16px;letter-spacing:-.5px">Coming Soon</h1>
     <p style="font-size:1.0625rem;line-height:1.6;color:#aec5c7;margin:0 0 8px">Authentic Indian groceries, delivered to your door.</p>
     <p style="font-size:1.0625rem;line-height:1.6;color:#aec5c7;margin:0 0 40px">We're putting the finishing touches on something special — launching very soon.</p>
-
-    <button onclick="document.getElementById('staff-access').style.display='block';this.style.display='none';"
-      style="background:none;border:none;color:#5f8487;font-size:.8125rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:8px">
-      Staff access
-    </button>
 
     <div id="staff-access" style="display:${formDisplay};margin-top:20px">
       <form method="POST" action="/api/gate" style="max-width:320px;margin:0 auto">
@@ -66,6 +61,38 @@ function gatePageHtml(next: string, error?: string): Response {
       </form>
     </div>
   </div>
+
+  <script>
+    // Hidden staff trigger — no visible button so the public never sees it.
+    // Works on every device: tap the logo 5 times (touch/click) OR type "staff".
+    (function () {
+      function reveal() {
+        var s = document.getElementById('staff-access');
+        s.style.display = 'block';
+        var input = s.querySelector('input[type=password]');
+        if (input) input.focus();
+      }
+      // Tap/click the logo 5 times within 2s (mobile + desktop)
+      var taps = 0, timer;
+      var logo = document.getElementById('logo');
+      if (logo) {
+        logo.addEventListener('click', function () {
+          taps++;
+          clearTimeout(timer);
+          timer = setTimeout(function () { taps = 0; }, 2000);
+          if (taps >= 5) { taps = 0; reveal(); }
+        });
+      }
+      // Type the word "staff" on a physical keyboard (desktop)
+      var buf = '';
+      document.addEventListener('keydown', function (e) {
+        if (e.key && e.key.length === 1) {
+          buf = (buf + e.key).slice(-5).toLowerCase();
+          if (buf === 'staff') reveal();
+        }
+      });
+    })();
+  </script>
 </body>
 </html>`;
   return new Response(html, {
