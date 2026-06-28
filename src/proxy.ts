@@ -123,7 +123,20 @@ export async function proxy(request: NextRequest) {
         hostname.startsWith("ops.") ||
         ((isDev || allowAdminOnMainDomain) && isAdminArea);
 
-    if (isAdminSubdomain) {
+    // API routes run their own auth checks and must never be redirected by the
+    // proxy — otherwise /api/gate (the password form) bounces to /admin/auth,
+    // which bounces back to the gate → ERR_TOO_MANY_REDIRECTS on the ops host.
+    const isApi = pathname.startsWith("/api");
+
+    if (isAdminSubdomain && !isApi) {
+        // Non-admins are sent to the RETAIL domain, not "/" on this host.
+        // On the ops subdomain every non-/admin/auth path redirects, so a
+        // same-host "/" redirect would loop forever (ERR_TOO_MANY_REDIRECTS).
+        const retailHome = new URL(
+            "/",
+            process.env.NEXT_PUBLIC_APP_URL || "https://gajjuexpress.co.uk"
+        );
+
         if (pathname === "/admin/auth") {
             if (user) {
                 // Already authenticated — redirect based on role
@@ -140,10 +153,7 @@ export async function proxy(request: NextRequest) {
                     return NextResponse.redirect(url);
                 }
                 // Non-admin user — send to retail without revealing admin exists
-                const url = request.nextUrl.clone();
-                url.pathname = "/";
-                url.search = "";
-                return NextResponse.redirect(url);
+                return NextResponse.redirect(retailHome);
             }
             // Unauthenticated — show the login form
             return supabaseResponse;
@@ -165,10 +175,7 @@ export async function proxy(request: NextRequest) {
 
         if (profile?.role !== "admin" && profile?.role !== "staff") {
             // Silently redirect to retail — no indication admin panel exists
-            const url = request.nextUrl.clone();
-            url.pathname = "/";
-            url.search = "";
-            return NextResponse.redirect(url);
+            return NextResponse.redirect(retailHome);
         }
 
         return supabaseResponse;

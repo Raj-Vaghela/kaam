@@ -85,7 +85,9 @@ export async function POST(request: NextRequest) {
   }
 
   const token = hashToken(sitePassword);
-  const res = NextResponse.redirect(new URL(next, request.url));
+  // 303 forces the follow-up to be a GET — without it the browser replays the
+  // POST against the destination page route (which only handles GET).
+  const res = NextResponse.redirect(new URL(next, request.url), { status: 303 });
   res.cookies.set("site-access", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
