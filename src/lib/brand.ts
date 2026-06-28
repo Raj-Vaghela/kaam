@@ -50,7 +50,7 @@ export const BRAND = {
     // 07946 range used previously is Ofcom-reserved for drama use and must never
     // ship to consumers).
     contact: {
-        email: "hello@gajjuexpress.co.uk",
+        email: "info@gajjuexpress.co.uk",
         ordersEmail: "orders@gajjuexpress.co.uk",
         phone: SUPPORT_PHONE,
         whatsapp: SUPPORT_WHATSAPP_DISPLAY,
