@@ -178,6 +178,20 @@ export async function proxy(request: NextRequest) {
             return NextResponse.redirect(retailHome);
         }
 
+        // Admin/staff confirmed. The ops subdomain is admin-only: any non-admin
+        // path (e.g. "/") would otherwise render the retail homepage, so send it
+        // to the dashboard. Static assets are left alone so admin pages can load
+        // their images/fonts.
+        const isAsset = /\.(ico|png|jpg|jpeg|svg|webp|gif|css|js|map|woff2?|ttf|eot|xml|txt|json)$/.test(
+            pathname
+        );
+        if (!pathname.startsWith("/admin") && !isAsset) {
+            const url = request.nextUrl.clone();
+            url.pathname = "/admin";
+            url.search = "";
+            return NextResponse.redirect(url);
+        }
+
         return supabaseResponse;
     }
 
