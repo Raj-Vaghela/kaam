@@ -95,6 +95,35 @@ export const metadata: Metadata = {
     },
 };
 
+// Sitewide structured data. Organization powers the Google Knowledge Panel /
+// brand entity; WebSite + SearchAction enables the sitelinks search box and
+// helps AI/LLM crawlers understand the site and its search endpoint.
+const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: BRAND.legalName,
+    alternateName: BRAND.name,
+    url: APP_URL,
+    logo: `${APP_URL}/gajjuexpress-logo-h.png`,
+    description: BRAND.description,
+    sameAs: [BRAND.social.instagram, BRAND.social.facebook],
+};
+
+const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: BRAND.name,
+    url: APP_URL,
+    potentialAction: {
+        "@type": "SearchAction",
+        target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${APP_URL}/products?search={search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
+    },
+};
+
 export default function RootLayout({
     children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -104,6 +133,14 @@ export default function RootLayout({
             <body
                 className={`${inter.variable} ${fraunces.variable} ${hindVadodara.variable} antialiased bg-cream text-ink`}
             >
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+                />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+                />
                 <ConsentProvider>
                     <CartProvider>
                         <ClientShell>{children}</ClientShell>

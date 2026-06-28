@@ -93,8 +93,65 @@ export default async function ProductDetailPage({ params }: Props) {
     const fullStars = Math.floor(avgRating);
     const hasHalf = avgRating - fullStars >= 0.5;
 
+    // ── Structured data (schema.org) ────────────────────────────────────────
+    // Product + Offer + AggregateRating power Google rich results (price,
+    // availability, stars in search) and help AI/LLM tools extract the listing.
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://gajjuexpress.co.uk";
+    const productSchema = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: product.name,
+        description: `Authentic Indian ${product.category.toLowerCase()} — ${product.name}${product.unit ? `, ${product.unit}` : ""}. Delivered across the UK by ${BRAND.name}.`,
+        category: product.category,
+        ...(product.imgUrl ? { image: product.imgUrl } : {}),
+        brand: { "@type": "Brand", name: BRAND.name },
+        offers: {
+            "@type": "Offer",
+            url: `${APP_URL}/products/${id}`,
+            priceCurrency: "GBP",
+            price: finalPrice.toFixed(2),
+            availability: inStock
+                ? "https://schema.org/InStock"
+                : "https://schema.org/OutOfStock",
+            seller: { "@type": "Organization", name: BRAND.legalName },
+        },
+        ...(reviewCount > 0
+            ? {
+                  aggregateRating: {
+                      "@type": "AggregateRating",
+                      ratingValue: avgRating.toFixed(1),
+                      reviewCount,
+                  },
+              }
+            : {}),
+    };
+
+    const breadcrumbSchema = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: APP_URL },
+            { "@type": "ListItem", position: 2, name: "Products", item: `${APP_URL}/products` },
+            {
+                "@type": "ListItem",
+                position: 3,
+                name: product.category,
+                item: `${APP_URL}/products?category=${encodeURIComponent(product.category)}`,
+            },
+            { "@type": "ListItem", position: 4, name: product.name, item: `${APP_URL}/products/${id}` },
+        ],
+    };
+
     return (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+            />
             {/* Back link */}
             <Link
                 href={`/products?category=${encodeURIComponent(product.category)}`}
