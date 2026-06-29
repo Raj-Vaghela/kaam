@@ -69,6 +69,8 @@ export default function HeroSection() {
                             src="https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=900"
                             alt="Indian spices"
                             fill
+                            priority
+                            sizes="(max-width: 1024px) 60vw, 30vw"
                             className="object-cover"
                         />
                     </div>
@@ -77,6 +79,7 @@ export default function HeroSection() {
                             src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&q=80&w=700"
                             alt="Traditional Indian sweets"
                             fill
+                            sizes="(max-width: 1024px) 45vw, 22vw"
                             className="object-cover"
                         />
                     </div>
