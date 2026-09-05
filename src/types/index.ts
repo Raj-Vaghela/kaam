@@ -53,7 +53,7 @@ export function toProduct(row: DbProductRow): Product {
         name: row.name,
         category: row.category,
         price: Number(row.price),
-        imgUrl: row.image_url || "https://placehold.co/400",
+        imgUrl: row.image_url || "https://placehold.co/400.png",
         unit: row.unit,
         weight_kg: row.weight_kg ?? 0,
         rating: row.rating || 0,

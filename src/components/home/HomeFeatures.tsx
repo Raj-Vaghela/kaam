@@ -77,9 +77,9 @@ export default function HomeFeatures() {
                                 fill
                                 className="object-cover group-hover:scale-105 transition-transform duration-700"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[var(--gajju-ink)]/85 via-[var(--gajju-ink)]/20 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[var(--gajju-ink)]/95 via-[var(--gajju-ink)]/25 to-transparent" />
                             <div className="absolute inset-x-0 bottom-0 p-5 flex items-end justify-between">
-                                <h3 className="font-display text-2xl text-cream leading-tight">
+                                <h3 className="font-display text-3xl font-semibold text-white leading-tight drop-shadow-[0_2px_16px_rgba(0,0,0,1)]">
                                     {cat}
                                 </h3>
                                 <ChevronRight

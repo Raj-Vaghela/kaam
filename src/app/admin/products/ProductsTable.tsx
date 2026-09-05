@@ -65,7 +65,7 @@ export default function ProductsTable({ products }: { products: ProductRow[] }) 
                                 <div className="flex items-center gap-3">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
-                                        src={product.image_url || "https://placehold.co/100"}
+                                        src={product.image_url || "https://placehold.co/100.png"}
                                         alt={product.name}
                                         className="w-11 h-11 rounded-xl object-cover bg-cream"
                                     />

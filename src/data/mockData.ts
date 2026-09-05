@@ -118,7 +118,7 @@ export const MOCK_PRODUCTS: Product[] = [
 
 export const CATEGORY_IMAGES: Record<string, string> = {
     "Grains & Rice":
-        "https://images.unsplash.com/photo-1536304993881-ff00228b4db8?auto=format&fit=crop&q=80&w=400",
+        "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&q=80&w=400",
     "Flour & Atta":
         "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=400",
     Spices:
