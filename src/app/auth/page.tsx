@@ -1,12 +1,25 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect, useCallback } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, User, ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { BRAND } from "@/lib/brand";
+
+declare global {
+    interface Window {
+        google?: {
+            accounts: {
+                id: {
+                    initialize: (config: Record<string, unknown>) => void;
+                    prompt: () => void;
+                };
+            };
+        };
+    }
+}
 
 type AuthMode = "signin" | "signup" | "forgot" | "magic";
 
@@ -39,6 +52,46 @@ function AuthPageInner() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
+    const handleGoogleCredential = useCallback(async (response: { credential: string }) => {
+        setError("");
+        setLoading(true);
+        try {
+            const { error } = await supabase.auth.signInWithIdToken({
+                provider: "google",
+                token: response.credential,
+            });
+            if (error) {
+                setError("Couldn't sign in with Google. Please try again or use email instead.");
+                setLoading(false);
+                return;
+            }
+            router.push(redirect);
+            router.refresh();
+        } catch {
+            setError("Something went wrong. Please try again.");
+            setLoading(false);
+        }
+    }, [supabase, router, redirect]);
+
+    useEffect(() => {
+        if (process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED !== "true") return;
+        const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+        if (!clientId) return;
+
+        const script = document.createElement("script");
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+            window.google?.accounts.id.initialize({
+                client_id: clientId,
+                callback: handleGoogleCredential,
+            });
+        };
+        document.head.appendChild(script);
+        return () => { document.head.removeChild(script); };
+    }, [handleGoogleCredential]);
+
     const switchMode = (next: AuthMode) => {
         setMode(next);
         setError("");
@@ -49,31 +102,10 @@ function AuthPageInner() {
         setShowConfirmPassword(false);
     };
 
-    const handleGoogleSignIn = async () => {
+    const handleGoogleSignIn = () => {
         setError("");
         setMessage("");
-        setLoading(true);
-        try {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: "google",
-                options: {
-                    redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`,
-                    // Request the minimum scopes — Google's OAuth consent screen will only ask
-                    // for what we need. Per GDPR data-minimization (Art. 5).
-                    scopes: "openid email profile",
-                },
-            });
-            if (error) {
-                console.error("[auth] google sign-in error:", error);
-                setError("Couldn't start Google sign-in. Please try again or use email instead.");
-                setLoading(false);
-            }
-            // On success the browser navigates to Google — no setLoading(false) here.
-        } catch (err) {
-            console.error("[auth] unexpected error during google sign-in:", err);
-            setError("Something went wrong. Please try again.");
-            setLoading(false);
-        }
+        window.google?.accounts.id.prompt();
     };
 
     const handleSubmit = async (e: React.FormEvent) => {

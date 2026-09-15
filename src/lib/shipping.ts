@@ -1,4 +1,4 @@
-const SENDCLOUD_BASE = "https://panel.sendcloud.sc/api/v3";
+const SENDCLOUD_BASE = "https://panel.sendcloud.sc/api/v2";
 
 export interface ShipmentResult {
   trackingNumber: string;
@@ -23,8 +23,7 @@ export interface ShipmentInput {
 const REQUIRED_ENVS = [
   "SENDCLOUD_API_KEY",
   "SENDCLOUD_API_SECRET",
-  "SENDCLOUD_SHIPPING_OPTION_CODE",
-  "SENDCLOUD_CONTRACT_ID",
+  "SENDCLOUD_SHIPPING_METHOD_ID",
   "SENDER_NAME",
   "SENDER_ADDRESS_LINE_1",
   "SENDER_POSTCODE",
@@ -44,50 +43,33 @@ function authHeader(): string {
 
 export async function createShipment(input: ShipmentInput): Promise<ShipmentResult> {
   const body = {
-    label_details: {
-      mime_type: "application/pdf",
-      dpi: 72,
-    },
-    to_address: {
+    parcel: {
       name: input.recipientName,
-      address_line_1: input.addressLine1,
-      ...(input.addressLine2 ? { address_line_2: input.addressLine2 } : {}),
-      postal_code: input.postcode,
+      address: input.addressLine1,
+      ...(input.addressLine2 ? { address_2: input.addressLine2 } : {}),
       city: input.city,
-      country_code: input.country || "GB",
-      phone_number: input.phone || "",
+      postal_code: input.postcode,
+      country: { iso_2: input.country || "GB" },
       ...(input.recipientEmail ? { email: input.recipientEmail } : {}),
-    },
-    from_address: {
-      name: process.env.SENDER_NAME!,
-      address_line_1: process.env.SENDER_ADDRESS_LINE_1!,
-      ...(process.env.SENDER_ADDRESS_LINE_2
-        ? { address_line_2: process.env.SENDER_ADDRESS_LINE_2 }
-        : {}),
-      postal_code: process.env.SENDER_POSTCODE!,
-      city: process.env.SENDER_CITY!,
-      country_code: process.env.SENDER_COUNTRY!,
-      phone_number: process.env.SENDER_PHONE ?? "",
-    },
-    ship_with: {
-      type: "shipping_option_code",
-      properties: {
-        shipping_option_code: process.env.SENDCLOUD_SHIPPING_OPTION_CODE!,
-        contract_id: Number(process.env.SENDCLOUD_CONTRACT_ID!),
+      telephone: input.phone || "",
+      weight: input.weightKg.toFixed(3),
+      order_number: input.orderId,
+      shipment: { id: Number(process.env.SENDCLOUD_SHIPPING_METHOD_ID!) },
+      sender_address: {
+        company_name: process.env.SENDER_NAME!,
+        street: process.env.SENDER_ADDRESS_LINE_1!,
+        ...(process.env.SENDER_ADDRESS_LINE_2
+          ? { house_number: process.env.SENDER_ADDRESS_LINE_2 }
+          : {}),
+        postal_code: process.env.SENDER_POSTCODE!,
+        city: process.env.SENDER_CITY!,
+        country: { iso_2: process.env.SENDER_COUNTRY! },
       },
+      request_label: true,
     },
-    order_number: input.orderId,
-    parcels: [
-      {
-        weight: {
-          value: input.weightKg.toFixed(3),
-          unit: "kg",
-        },
-      },
-    ],
   };
 
-  const res = await fetch(`${SENDCLOUD_BASE}/shipments/announce`, {
+  const res = await fetch(`${SENDCLOUD_BASE}/parcels`, {
     method: "POST",
     headers: {
       Authorization: authHeader(),
@@ -103,19 +85,19 @@ export async function createShipment(input: ShipmentInput): Promise<ShipmentResu
   }
 
   const json = await res.json();
-  const parcel = json.data?.parcels?.[0];
+  const parcel = json.parcel;
   if (!parcel) {
     throw new Error("Sendcloud response missing parcel data");
   }
 
-  const errs = parcel.errors;
-  if (Array.isArray(errs) && errs.length > 0) {
-    throw new Error(`Sendcloud parcel error: ${JSON.stringify(errs)}`);
+  if (parcel.errors) {
+    throw new Error(`Sendcloud parcel error: ${JSON.stringify(parcel.errors)}`);
   }
 
-  const labelLink = parcel.documents?.find(
-    (d: { type: string; link: string }) => d.type === "label"
-  )?.link;
+  const labelLink =
+    parcel.label?.label_printer ||
+    parcel.label?.normal_printer?.[0];
+
   if (!labelLink) {
     throw new Error("Sendcloud response missing label link");
   }
