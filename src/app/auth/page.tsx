@@ -74,7 +74,6 @@ function AuthPageInner() {
     }, [supabase, router, redirect]);
 
     useEffect(() => {
-        if (process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED !== "true") return;
         const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
         if (!clientId) return;
 
@@ -441,7 +440,7 @@ function AuthPageInner() {
                                 </div>
                             </div>
 
-                            {process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true" && (
+                            {!!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
                                 <button
                                     type="button"
                                     onClick={handleGoogleSignIn}
