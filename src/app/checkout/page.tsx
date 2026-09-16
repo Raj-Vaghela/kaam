@@ -110,6 +110,40 @@ export default function CheckoutPage() {
                 <h1 className="font-display text-5xl text-ink">Checkout</h1>
             </div>
 
+            {/* Mobile-only order summary — shows above form on small screens */}
+            <div className="lg:hidden mb-6 bg-cream-soft border border-cream-deep rounded-3xl p-5">
+                <details>
+                    <summary className="flex items-center justify-between cursor-pointer list-none">
+                        <span className="font-display text-xl text-ink">
+                            Order summary ({cartCount} {cartCount === 1 ? "item" : "items"})
+                        </span>
+                        <span className="font-display text-xl text-ink">£{totalWithVat.toFixed(2)}</span>
+                    </summary>
+                    <div className="mt-4 space-y-3 pt-4 border-t border-cream-deep">
+                        {cart.map((item) => (
+                            <div key={item.id} className="flex gap-3 items-center">
+                                <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-white shrink-0">
+                                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--gajju-teal-deep)] text-cream text-[9px] font-bold flex items-center justify-center">
+                                        {item.qty}
+                                    </span>
+                                </div>
+                                <p className="flex-grow text-sm font-medium text-ink line-clamp-1">{item.name}</p>
+                                <p className="text-sm font-semibold text-ink shrink-0">£{(item.price * item.qty).toFixed(2)}</p>
+                            </div>
+                        ))}
+                        <div className="pt-3 border-t border-cream-deep space-y-1.5 text-sm">
+                            <div className="flex justify-between text-ink-soft"><span>Subtotal</span><span>£{cartTotal.toFixed(2)}</span></div>
+                            {promoResult?.valid && promoResult.discountAmount && (
+                                <div className="flex justify-between text-leaf font-semibold"><span>Discount</span><span>-£{promoResult.discountAmount.toFixed(2)}</span></div>
+                            )}
+                            <div className="flex justify-between text-ink-soft"><span>VAT (20%)</span><span>£{vatAmount.toFixed(2)}</span></div>
+                            <div className="flex justify-between text-ink-soft"><span>Delivery</span><span>{deliveryFee === 0 ? <span className="text-leaf font-semibold">FREE</span> : `£${deliveryFee.toFixed(2)}`}</span></div>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
             <div className="grid lg:grid-cols-5 gap-10">
                 {/* Left: Form */}
                 <div className="lg:col-span-3 space-y-6">

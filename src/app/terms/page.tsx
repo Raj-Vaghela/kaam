@@ -43,7 +43,10 @@ export default function TermsPage() {
                     <p>
                         {BRAND.legalName} operates the {BRAND.name} online grocery store at
                         gajjuexpress.co.uk. Registered in England and Wales.
-                        Company number: {BRAND.companyNumber}.
+                        {BRAND.companyNumber && BRAND.companyNumber !== "COMPANY_NUMBER_NOT_SET"
+                            ? `Company number: ${BRAND.companyNumber}.`
+                            : "Company registration pending."
+                        }
                         Registered office: {registeredAddressStr}.
                     </p>
                     <p>

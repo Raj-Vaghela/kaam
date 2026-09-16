@@ -49,7 +49,11 @@ export default function PrivacyPolicyPage() {
                     </p>
                     <ul className="list-none pl-0 space-y-1 mt-3">
                         <li>
-                            <strong>Company number:</strong> {BRAND.companyNumber}
+                            <strong>Company number:</strong>{" "}
+                            {BRAND.companyNumber && BRAND.companyNumber !== "COMPANY_NUMBER_NOT_SET"
+                                ? BRAND.companyNumber
+                                : "Pending registration"
+                            }
                         </li>
                         <li>
                             <strong>Registered office:</strong> {registeredAddressStr}
