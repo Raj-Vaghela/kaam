@@ -6,6 +6,9 @@ import { ConsentProvider } from "@/context/ConsentContext";
 import ClientShell from "@/components/layout/ClientShell";
 import CookieConsent from "@/components/gdpr/CookieConsent";
 import GatedAnalytics from "@/components/analytics/GatedAnalytics";
+import AnnouncementBar from "@/components/promotions/AnnouncementBar";
+import PromoPopup from "@/components/promotions/PromoPopup";
+import { createClient } from "@/lib/supabase/server";
 import { BRAND } from "@/lib/brand";
 
 const inter = Inter({
@@ -124,9 +127,18 @@ const websiteSchema = {
     },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
     children,
 }: Readonly<{ children: React.ReactNode }>) {
+    const supabase = await createClient();
+    const { data: banners } = await supabase
+        .from("banners")
+        .select("*")
+        .eq("is_active", true);
+
+    const bar = banners?.find((b) => b.type === "bar") ?? null;
+    const popup = banners?.find((b) => b.type === "popup") ?? null;
+
     return (
         // en-GB for a UK-based store (affects language negotiation and Google Search region)
         <html lang="en-GB">
@@ -143,7 +155,9 @@ export default function RootLayout({
                 />
                 <ConsentProvider>
                     <CartProvider>
+                        <AnnouncementBar banner={bar} />
                         <ClientShell>{children}</ClientShell>
+                        <PromoPopup banner={popup} />
                     </CartProvider>
                     {/* CookieConsent and GatedAnalytics must be inside ConsentProvider */}
                     <CookieConsent />

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, Package, FileText, Shield, Users, ShoppingBag, RotateCcw } from "lucide-react";
+import { LayoutDashboard, Package, FileText, Shield, Users, ShoppingBag, RotateCcw, Megaphone, Tag } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { requireAdmin } from "@/lib/auth/admin";
 import AdminSignOutButton from "./AdminSignOutButton";
@@ -14,6 +14,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         { href: "/admin/orders", icon: ShoppingBag, label: "Orders" },
         { href: "/admin/returns", icon: RotateCcw, label: "Returns" },
         { href: "/admin/products", icon: Package, label: "Products" },
+        { href: "/admin/banners", icon: Megaphone, label: "Promotions" },
+        { href: "/admin/promos", icon: Tag, label: "Promo Codes" },
         { href: "/admin/invoices", icon: FileText, label: "Invoices" },
         { href: "/admin/users", icon: Users, label: "Users" },
         { href: "/admin/audit-log", icon: Shield, label: "Audit Log" },
