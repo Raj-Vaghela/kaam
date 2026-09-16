@@ -13,7 +13,6 @@ const scriptSrc = [
     "https://js.stripe.com",
     "https://*.stripe.network",
     "https://maps.googleapis.com",
-    "https://accounts.google.com",
 ]
     .filter(Boolean)
     .join(" ");
@@ -29,7 +28,7 @@ const cspDirectives = [
     // Clickjacking defence at CSP level (supplements X-Frame-Options)
     "frame-ancestors 'none'",
     // Sentry tunnel route proxies to *.ingest.sentry.io and *.ingest.us.sentry.io
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://o4504266765647872.ingest.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://accounts.google.com",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://o4504266765647872.ingest.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

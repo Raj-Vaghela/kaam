@@ -1,25 +1,12 @@
 "use client";
 
-import { useState, Suspense, useEffect, useCallback } from "react";
+import { useState, Suspense } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, User, ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { BRAND } from "@/lib/brand";
-
-declare global {
-    interface Window {
-        google?: {
-            accounts: {
-                id: {
-                    initialize: (config: Record<string, unknown>) => void;
-                    prompt: () => void;
-                };
-            };
-        };
-    }
-}
 
 type AuthMode = "signin" | "signup" | "forgot" | "magic";
 
@@ -52,44 +39,27 @@ function AuthPageInner() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    const handleGoogleCredential = useCallback(async (response: { credential: string }) => {
+    const handleGoogleSignIn = async () => {
         setError("");
+        setMessage("");
         setLoading(true);
         try {
-            const { error } = await supabase.auth.signInWithIdToken({
+            const { error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
-                token: response.credential,
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`,
+                    scopes: "openid email profile",
+                },
             });
             if (error) {
-                setError("Couldn't sign in with Google. Please try again or use email instead.");
+                setError("Couldn't start Google sign-in. Please try again or use email instead.");
                 setLoading(false);
-                return;
             }
-            router.push(redirect);
-            router.refresh();
         } catch {
             setError("Something went wrong. Please try again.");
             setLoading(false);
         }
-    }, [supabase, router, redirect]);
-
-    useEffect(() => {
-        const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-        if (!clientId) return;
-
-        const script = document.createElement("script");
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-            window.google?.accounts.id.initialize({
-                client_id: clientId,
-                callback: handleGoogleCredential,
-            });
-        };
-        document.head.appendChild(script);
-        return () => { document.head.removeChild(script); };
-    }, [handleGoogleCredential]);
+    };
 
     const switchMode = (next: AuthMode) => {
         setMode(next);
@@ -101,11 +71,6 @@ function AuthPageInner() {
         setShowConfirmPassword(false);
     };
 
-    const handleGoogleSignIn = () => {
-        setError("");
-        setMessage("");
-        window.google?.accounts.id.prompt();
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
