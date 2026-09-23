@@ -4,22 +4,28 @@
 // counters are useless. Missing Upstash vars in production cause an immediate startup failure so
 // misconfigurations are caught at deploy time rather than silently under-enforcing rate limits.
 
-// Production guard: refuse to start if Upstash is not configured (in-memory fallback is
+// Vercel's Upstash marketplace integration injects the legacy Vercel KV names
+// (KV_REST_API_URL / KV_REST_API_TOKEN) rather than UPSTASH_*. Same database,
+// same REST API — accept either, so re-provisioning the integration doesn't
+// silently take the limiter (and with it, admin login) offline.
+export const REDIS_REST_URL =
+    process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+export const REDIS_REST_TOKEN =
+    process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+
+// Production guard: refuse to start if Redis is not configured (in-memory fallback is
 // per-process and therefore ineffective on multi-instance Vercel deployments).
-if (
-    process.env.NODE_ENV === "production" &&
-    (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN)
-) {
+if (process.env.NODE_ENV === "production" && (!REDIS_REST_URL || !REDIS_REST_TOKEN)) {
     throw new Error(
-        "[rate-limit] UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set in production. " +
+        "[rate-limit] Redis REST credentials must be set in production. " +
+        "Accepts UPSTASH_REDIS_REST_URL/TOKEN or KV_REST_API_URL/TOKEN. " +
         "The in-memory fallback is not safe on multi-instance deployments. " +
-        "Create a Redis database at https://console.upstash.com and add both vars to your Vercel env."
+        "Provision Upstash Redis from the Vercel dashboard and redeploy."
     );
 }
 
 // Dev/test warning: in-memory fallback is active; log once to avoid noise.
-if (process.env.NODE_ENV !== "production" &&
-    (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN)) {
+if (process.env.NODE_ENV !== "production" && (!REDIS_REST_URL || !REDIS_REST_TOKEN)) {
     console.warn(
         "[rate-limit] Upstash env vars not set — using in-memory fallback. " +
         "This is fine for local development but must not reach production."
@@ -96,8 +102,8 @@ async function redisRateLimit(
     limit: number,
     windowMs: number
 ): Promise<RateLimitResult> {
-    const url = process.env.UPSTASH_REDIS_REST_URL!;
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN!;
+    const url = REDIS_REST_URL!;
+    const token = REDIS_REST_TOKEN!;
     const now = Date.now();
     const windowStart = now - windowMs;
 
@@ -156,8 +162,8 @@ export async function rateLimit(
     windowMs: number
 ): Promise<RateLimitResult> {
     if (
-        process.env.UPSTASH_REDIS_REST_URL &&
-        process.env.UPSTASH_REDIS_REST_TOKEN
+        REDIS_REST_URL &&
+        REDIS_REST_TOKEN
     ) {
         return redisRateLimit(key, limit, windowMs);
     }
