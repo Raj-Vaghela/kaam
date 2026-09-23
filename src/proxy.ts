@@ -58,7 +58,17 @@ export async function proxy(request: NextRequest) {
     // ── Site password gate ──────────────────────────────────────────────────
     const sitePassword = process.env.SITE_PASSWORD;
     if (sitePassword) {
+        // The gate hides the retail storefront from the public before launch.
+        // Admin surfaces are already protected by their own session + role
+        // checks, so gating them too would force staff through two passwords
+        // and lock them out of the ops subdomain entirely.
+        const isAdminSurface =
+            (request.headers.get("host") || "").startsWith("ops.") ||
+            pathname.startsWith("/admin") ||
+            pathname.startsWith("/api/admin");
+
         const bypass =
+            isAdminSurface ||
             GATE_BYPASS.some((p) => pathname.startsWith(p)) ||
             /\.(ico|png|jpg|jpeg|svg|webp|gif|css|js|map|woff2?|ttf|eot|xml|txt|json)$/.test(
                 pathname
