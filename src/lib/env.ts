@@ -49,9 +49,12 @@ export const STRIPE_WEBHOOK_SECRET = serverRequired("STRIPE_WEBHOOK_SECRET", pro
 export const RESEND_API_KEY = serverRequired("RESEND_API_KEY", process.env.RESEND_API_KEY);
 export const RESEND_DOMAIN = process.env.RESEND_DOMAIN || "resend.dev";
 
-// Upstash Redis (rate limiting)
-export const UPSTASH_REDIS_REST_URL = optional("UPSTASH_REDIS_REST_URL");
-export const UPSTASH_REDIS_REST_TOKEN = optional("UPSTASH_REDIS_REST_TOKEN");
+// Upstash Redis (rate limiting). Vercel's marketplace integration provisions
+// these under the legacy Vercel KV names, so fall back to those.
+export const UPSTASH_REDIS_REST_URL =
+    optional("UPSTASH_REDIS_REST_URL") ?? optional("KV_REST_API_URL");
+export const UPSTASH_REDIS_REST_TOKEN =
+    optional("UPSTASH_REDIS_REST_TOKEN") ?? optional("KV_REST_API_TOKEN");
 
 // Sentry error monitoring
 // owned by error-monitoring agent for DSN wiring; validated in production below
@@ -81,27 +84,46 @@ export const REGISTERED_ADDRESS_COUNTRY = optionalWithDefault("REGISTERED_ADDRES
 // rather than serving legally incomplete pages.
 
 if (process.env.NODE_ENV === "production" && typeof window === "undefined") {
-    const prodRequired = [
+    // Statutory disclosures — these appear on invoices, emails and the footer.
+    const legallyRequired = [
         "COMPANY_NUMBER",
         "RESEND_DOMAIN",
         "REGISTERED_ADDRESS_LINE1",
         "REGISTERED_ADDRESS_CITY",
         "REGISTERED_ADDRESS_POSTCODE",
-        // Rate limiting — in-memory fallback is useless on Vercel multi-instance.
-        "UPSTASH_REDIS_REST_URL",
-        "UPSTASH_REDIS_REST_TOKEN",
-        // Error monitoring — must be configured before going live.
-        "SENTRY_DSN",
-        "NEXT_PUBLIC_SENTRY_DSN",
     ] as const;
 
-    for (const key of prodRequired) {
+    for (const key of legallyRequired) {
         if (!process.env[key]) {
             throw new Error(
                 `[env] Production requires ${key} to be set. ` +
                 `This value is required for UK legal compliance (CA 2006 s.82 / E-commerce Regs).`
             );
         }
+    }
+
+    // Operational requirements — not legal, but unsafe to run without.
+    const operationallyRequired = ["SENTRY_DSN", "NEXT_PUBLIC_SENTRY_DSN"] as const;
+
+    for (const key of operationallyRequired) {
+        if (!process.env[key]) {
+            throw new Error(`[env] Production requires ${key} to be set.`);
+        }
+    }
+
+    // Rate limiting. Vercel's Upstash integration injects the legacy Vercel KV
+    // names, so accept either scheme — requiring only UPSTASH_* meant a
+    // correctly provisioned Redis still failed the build.
+    const hasRedis =
+        (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
+        (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN);
+
+    if (!hasRedis) {
+        throw new Error(
+            "[env] Production requires Redis REST credentials for rate limiting. " +
+            "Accepts UPSTASH_REDIS_REST_URL/TOKEN or KV_REST_API_URL/TOKEN. " +
+            "Provision Upstash Redis from the Vercel dashboard and redeploy."
+        );
     }
 
     // VAT number format check: GB followed by 9 or 12 digits (HMRC formats)
