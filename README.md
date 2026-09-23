@@ -88,12 +88,27 @@ Rotate secrets at least every 90 days or immediately on suspicion of compromise.
 
 ## Admin onboarding
 
-To grant a user the `admin` role:
+Admin accounts are managed with a local-only CLI. There is deliberately no
+admin-creation endpoint on the deployed site — see
+[docs/admin-access.md](docs/admin-access.md) for the full reasoning.
 
-1. Use the `admin_set_user_role` SECURITY DEFINER RPC via the Supabase Studio SQL editor, or call it from a trusted admin context.
-2. The user must have MFA enabled before being granted admin access.
+```bash
+node --env-file=.env.local scripts/admin.mjs list
+node --env-file=.env.local scripts/admin.mjs create admin@gajjuexpress.co.uk
+node --env-file=.env.local scripts/admin.mjs revoke-all
+```
 
-Admin actions are recorded in the `audit_logs` table via `src/lib/audit.ts`.
+Role changes take effect on the next request — **no redeploy needed**. The
+proxy and `requireAdmin()` read `profiles.role` from Supabase per request
+rather than at build time.
+
+Admins sign in at `https://ops.gajjuexpress.co.uk/admin/auth` (or
+`/admin/auth` on localhost). Admin actions are recorded in the `audit_logs`
+table via `src/lib/audit.ts`.
+
+Existing admins can also change roles from the Users page in the admin
+panel, which goes through the `admin_set_user_role` SECURITY DEFINER RPC.
+The CLI is how you get back in when no admins remain.
 
 ---
 
