@@ -9,8 +9,44 @@ export const revalidate = 60; // revalidate product listings every 60 seconds
 
 const PAGE_SIZE = 12;
 
+// Sort options are a closed set. The `?sort=` value is only ever used as a key
+// into this map — column names are never taken from user input.
+const SORT_OPTIONS = {
+    featured: {
+        label: "Featured",
+        order: [
+            { column: "bestseller", ascending: false },
+            { column: "name", ascending: true },
+        ],
+    },
+    "price-asc": {
+        label: "Price: low to high",
+        order: [{ column: "price", ascending: true }],
+    },
+    "price-desc": {
+        label: "Price: high to low",
+        order: [{ column: "price", ascending: false }],
+    },
+    rating: {
+        label: "Top rated",
+        order: [{ column: "rating", ascending: false }],
+    },
+    name: {
+        label: "A–Z",
+        order: [{ column: "name", ascending: true }],
+    },
+} as const;
+
+type SortKey = keyof typeof SORT_OPTIONS;
+
 interface Props {
-    searchParams: Promise<{ category?: string; search?: string; page?: string }>;
+    searchParams: Promise<{
+        category?: string;
+        search?: string;
+        page?: string;
+        sort?: string;
+        stock?: string;
+    }>;
 }
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
@@ -50,7 +86,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 }
 
 export default async function ProductsPage({ searchParams }: Props) {
-    const { category, search, page: pageParam } = await searchParams;
+    const { category, search, page: pageParam, sort, stock } = await searchParams;
     const supabase = await createClient();
 
     const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
@@ -61,33 +97,63 @@ export default async function ProductsPage({ searchParams }: Props) {
         ? decodeURIComponent(search).trim().slice(0, 100).replace(/[%_]/g, "")
         : undefined;
 
-    // Data query with pagination
+    // Sort is resolved against a fixed whitelist — the incoming value is never
+    // passed to .order(), so a crafted ?sort= can't reach the query builder.
+    const activeSort = sort && sort in SORT_OPTIONS ? (sort as SortKey) : "featured";
+    const inStockOnly = stock === "in";
+
+    // The search filter is shared so the two queries can't drift apart.
+    const searchFilter = sanitisedSearch
+        ? `name.ilike.%${sanitisedSearch}%,category.ilike.%${sanitisedSearch}%`
+        : undefined;
+
+    // NOTE: the data and count queries must apply the SAME filters. If they
+    // diverge, the pagination total stops matching the rows returned and users
+    // land on empty pages.
     let dataQuery = supabase
         .from("products")
         .select("id, name, category, price, image_url, unit, weight_kg, rating, bestseller, club_price, stock");
     if (category) dataQuery = dataQuery.eq("category", category);
-    if (sanitisedSearch) dataQuery = dataQuery.or(`name.ilike.%${sanitisedSearch}%,category.ilike.%${sanitisedSearch}%`);
+    if (searchFilter) dataQuery = dataQuery.or(searchFilter);
+    if (inStockOnly) dataQuery = dataQuery.gt("stock", 0);
+
+    for (const { column, ascending } of SORT_OPTIONS[activeSort].order) {
+        dataQuery = dataQuery.order(column, { ascending, nullsFirst: false });
+    }
     dataQuery = dataQuery.range(offset, offset + PAGE_SIZE - 1);
 
-    // Count query
-    let countQuery = supabase
-        .from("products")
-        .select("*", { count: "exact", head: true });
+    let countQuery = supabase.from("products").select("*", { count: "exact", head: true });
     if (category) countQuery = countQuery.eq("category", category);
-    if (sanitisedSearch) countQuery = countQuery.or(`name.ilike.%${sanitisedSearch}%,category.ilike.%${sanitisedSearch}%`);
+    if (searchFilter) countQuery = countQuery.or(searchFilter);
+    if (inStockOnly) countQuery = countQuery.gt("stock", 0);
 
     const [{ data: products }, { count: totalCount }] = await Promise.all([dataQuery, countQuery]);
 
     const totalPages = totalCount ? Math.ceil(totalCount / PAGE_SIZE) : 1;
 
-    // Build URL for pagination links preserving existing params
-    function pageHref(p: number): string {
+    // Shared URL builder so sort/filter/pagination never drop each other's state.
+    function buildHref(
+        overrides: Partial<{ page: number; sort: string; stock: string | null }>
+    ): string {
         const params = new URLSearchParams();
         if (category) params.set("category", category);
         if (search) params.set("search", search);
-        params.set("page", String(p));
-        return `/products?${params.toString()}`;
+
+        const nextSort = overrides.sort ?? (activeSort !== "featured" ? activeSort : undefined);
+        if (nextSort && nextSort !== "featured") params.set("sort", nextSort);
+
+        const nextStock = overrides.stock !== undefined ? overrides.stock : inStockOnly ? "in" : null;
+        if (nextStock) params.set("stock", nextStock);
+
+        // Changing a filter must reset to page 1 — page 6 of the old result
+        // set is usually empty under the new one.
+        if (overrides.page && overrides.page > 1) params.set("page", String(overrides.page));
+
+        const qs = params.toString();
+        return qs ? `/products?${qs}` : "/products";
     }
+
+    const pageHref = (p: number) => buildHref({ page: p });
 
     // Build page numbers to show (always show first, last, current ±1)
     function getPageNumbers(): (number | "ellipsis")[] {
@@ -120,6 +186,63 @@ export default async function ProductsPage({ searchParams }: Props) {
                         ? `Showing products matching your search across our range.`
                         : "Browse our hand-picked collection of authentic groceries, spices, snacks and more — sourced with care, delivered tomorrow."}
                 </p>
+            </div>
+
+            {/* Sort + filter controls. Rendered as links rather than a client
+                component so filtered views stay shareable, crawlable, and work
+                without JavaScript. */}
+            <div className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-4 border-y border-cream-deep py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-mute mr-1">
+                        Sort
+                    </span>
+                    {(Object.keys(SORT_OPTIONS) as SortKey[]).map((key) => {
+                        const isActive = key === activeSort;
+                        return (
+                            <Link
+                                key={key}
+                                href={buildHref({ sort: key })}
+                                scroll={false}
+                                aria-current={isActive ? "true" : undefined}
+                                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                                    isActive
+                                        ? "bg-[var(--gajju-teal-deep)] text-cream"
+                                        : "bg-cream-soft border border-cream-deep text-ink-soft hover:border-ink-mute"
+                                }`}
+                            >
+                                {SORT_OPTIONS[key].label}
+                            </Link>
+                        );
+                    })}
+                </div>
+
+                <Link
+                    href={buildHref({ stock: inStockOnly ? null : "in" })}
+                    scroll={false}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                        inStockOnly
+                            ? "bg-leaf-soft border border-leaf/40 text-leaf"
+                            : "bg-cream-soft border border-cream-deep text-ink-soft hover:border-ink-mute"
+                    }`}
+                >
+                    <span
+                        aria-hidden
+                        className={`w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center text-[9px] leading-none ${
+                            inStockOnly
+                                ? "bg-leaf border-leaf text-white"
+                                : "border-ink-mute/50"
+                        }`}
+                    >
+                        {inStockOnly ? "✓" : ""}
+                    </span>
+                    In stock only
+                </Link>
+
+                {totalCount != null && (
+                    <span className="ml-auto text-xs text-ink-mute">
+                        {totalCount} {totalCount === 1 ? "product" : "products"}
+                    </span>
+                )}
             </div>
 
             {products && products.length > 0 ? (
