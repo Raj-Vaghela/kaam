@@ -4,6 +4,8 @@ import ProductCard from "@/components/product/ProductCard";
 import { toProduct } from "@/types";
 import { BRAND } from "@/lib/brand";
 import Link from "next/link";
+import { CATEGORIES } from "@/data/mockData";
+import FilterSidebar, { type FilterGroup } from "@/components/product/FilterSidebar";
 
 export const revalidate = 60; // revalidate product listings every 60 seconds
 
@@ -39,6 +41,15 @@ const SORT_OPTIONS = {
 
 type SortKey = keyof typeof SORT_OPTIONS;
 
+// Price bands, also a closed set — bounds are never read from the query string.
+const PRICE_BANDS = {
+    "under-5": { label: "Under £5", min: undefined, max: 5 },
+    "5-10": { label: "£5 – £10", min: 5, max: 10 },
+    "over-10": { label: "Over £10", min: 10, max: undefined },
+} as const;
+
+type PriceKey = keyof typeof PRICE_BANDS;
+
 interface Props {
     searchParams: Promise<{
         category?: string;
@@ -46,6 +57,7 @@ interface Props {
         page?: string;
         sort?: string;
         stock?: string;
+        price?: string;
     }>;
 }
 
@@ -86,7 +98,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 }
 
 export default async function ProductsPage({ searchParams }: Props) {
-    const { category, search, page: pageParam, sort, stock } = await searchParams;
+    const { category, search, page: pageParam, sort, stock, price } = await searchParams;
     const supabase = await createClient();
 
     const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
@@ -101,6 +113,8 @@ export default async function ProductsPage({ searchParams }: Props) {
     // passed to .order(), so a crafted ?sort= can't reach the query builder.
     const activeSort = sort && sort in SORT_OPTIONS ? (sort as SortKey) : "featured";
     const inStockOnly = stock === "in";
+    const activePrice = price && price in PRICE_BANDS ? (price as PriceKey) : undefined;
+    const band = activePrice ? PRICE_BANDS[activePrice] : undefined;
 
     // The search filter is shared so the two queries can't drift apart.
     const searchFilter = sanitisedSearch
@@ -116,6 +130,8 @@ export default async function ProductsPage({ searchParams }: Props) {
     if (category) dataQuery = dataQuery.eq("category", category);
     if (searchFilter) dataQuery = dataQuery.or(searchFilter);
     if (inStockOnly) dataQuery = dataQuery.gt("stock", 0);
+    if (band?.min !== undefined) dataQuery = dataQuery.gte("price", band.min);
+    if (band?.max !== undefined) dataQuery = dataQuery.lt("price", band.max);
 
     for (const { column, ascending } of SORT_OPTIONS[activeSort].order) {
         dataQuery = dataQuery.order(column, { ascending, nullsFirst: false });
@@ -126,6 +142,8 @@ export default async function ProductsPage({ searchParams }: Props) {
     if (category) countQuery = countQuery.eq("category", category);
     if (searchFilter) countQuery = countQuery.or(searchFilter);
     if (inStockOnly) countQuery = countQuery.gt("stock", 0);
+    if (band?.min !== undefined) countQuery = countQuery.gte("price", band.min);
+    if (band?.max !== undefined) countQuery = countQuery.lt("price", band.max);
 
     const [{ data: products }, { count: totalCount }] = await Promise.all([dataQuery, countQuery]);
 
@@ -133,10 +151,20 @@ export default async function ProductsPage({ searchParams }: Props) {
 
     // Shared URL builder so sort/filter/pagination never drop each other's state.
     function buildHref(
-        overrides: Partial<{ page: number; sort: string; stock: string | null }>
+        overrides: Partial<{
+            page: number;
+            sort: string;
+            stock: string | null;
+            price: string | null;
+            category: string | null;
+        }>
     ): string {
         const params = new URLSearchParams();
-        if (category) params.set("category", category);
+
+        const nextCategory =
+            overrides.category !== undefined ? overrides.category : category ?? null;
+        if (nextCategory) params.set("category", nextCategory);
+
         if (search) params.set("search", search);
 
         const nextSort = overrides.sort ?? (activeSort !== "featured" ? activeSort : undefined);
@@ -145,6 +173,10 @@ export default async function ProductsPage({ searchParams }: Props) {
         const nextStock = overrides.stock !== undefined ? overrides.stock : inStockOnly ? "in" : null;
         if (nextStock) params.set("stock", nextStock);
 
+        const nextPrice =
+            overrides.price !== undefined ? overrides.price : activePrice ?? null;
+        if (nextPrice) params.set("price", nextPrice);
+
         // Changing a filter must reset to page 1 — page 6 of the old result
         // set is usually empty under the new one.
         if (overrides.page && overrides.page > 1) params.set("page", String(overrides.page));
@@ -152,6 +184,43 @@ export default async function ProductsPage({ searchParams }: Props) {
         const qs = params.toString();
         return qs ? `/products?${qs}` : "/products";
     }
+
+    // Filter rail contents. Selecting an already-active option clears it, so
+    // every row doubles as its own toggle.
+    const filterGroups: FilterGroup[] = [
+        {
+            title: "Category",
+            links: [
+                { label: "All products", href: buildHref({ category: null }), active: !category },
+                ...CATEGORIES.filter((c) => c !== "All").map((c) => ({
+                    label: c,
+                    href: buildHref({ category: category === c ? null : c }),
+                    active: category === c,
+                })),
+            ],
+        },
+        {
+            title: "Price",
+            links: (Object.keys(PRICE_BANDS) as PriceKey[]).map((key) => ({
+                label: PRICE_BANDS[key].label,
+                href: buildHref({ price: activePrice === key ? null : key }),
+                active: activePrice === key,
+            })),
+        },
+        {
+            title: "Availability",
+            links: [
+                {
+                    label: "In stock only",
+                    href: buildHref({ stock: inStockOnly ? null : "in" }),
+                    active: inStockOnly,
+                },
+            ],
+        },
+    ];
+
+    const activeFilterCount =
+        (category ? 1 : 0) + (activePrice ? 1 : 0) + (inStockOnly ? 1 : 0);
 
     const pageHref = (p: number) => buildHref({ page: p });
 
@@ -188,62 +257,46 @@ export default async function ProductsPage({ searchParams }: Props) {
                 </p>
             </div>
 
-            {/* Sort + filter controls. Rendered as links rather than a client
-                component so filtered views stay shareable, crawlable, and work
-                without JavaScript. */}
-            <div className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-4 border-y border-cream-deep py-4">
-                <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-mute mr-1">
-                        Sort
-                    </span>
-                    {(Object.keys(SORT_OPTIONS) as SortKey[]).map((key) => {
-                        const isActive = key === activeSort;
-                        return (
-                            <Link
-                                key={key}
-                                href={buildHref({ sort: key })}
-                                scroll={false}
-                                aria-current={isActive ? "true" : undefined}
-                                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                                    isActive
-                                        ? "bg-[var(--gajju-teal-deep)] text-cream"
-                                        : "bg-cream-soft border border-cream-deep text-ink-soft hover:border-ink-mute"
-                                }`}
-                            >
-                                {SORT_OPTIONS[key].label}
-                            </Link>
-                        );
-                    })}
-                </div>
+            <div className="flex items-start gap-0">
+                <FilterSidebar
+                    groups={filterGroups}
+                    activeCount={activeFilterCount}
+                    clearHref={buildHref({ category: null, price: null, stock: null })}
+                />
 
-                <Link
-                    href={buildHref({ stock: inStockOnly ? null : "in" })}
-                    scroll={false}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                        inStockOnly
-                            ? "bg-leaf-soft border border-leaf/40 text-leaf"
-                            : "bg-cream-soft border border-cream-deep text-ink-soft hover:border-ink-mute"
-                    }`}
-                >
-                    <span
-                        aria-hidden
-                        className={`w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center text-[9px] leading-none ${
-                            inStockOnly
-                                ? "bg-leaf border-leaf text-white"
-                                : "border-ink-mute/50"
-                        }`}
-                    >
-                        {inStockOnly ? "✓" : ""}
-                    </span>
-                    In stock only
-                </Link>
-
-                {totalCount != null && (
-                    <span className="ml-auto text-xs text-ink-mute">
-                        {totalCount} {totalCount === 1 ? "product" : "products"}
-                    </span>
-                )}
-            </div>
+                <div className="flex-1 min-w-0">
+                    {/* Sort bar. Links rather than a select so each sort order is
+                        its own URL and the page needs no JS to change order. */}
+                    <div className="mb-7 flex flex-wrap items-center gap-x-5 gap-y-3 pb-4 border-b border-cream-deep">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-mute mr-1">
+                                Sort
+                            </span>
+                            {(Object.keys(SORT_OPTIONS) as SortKey[]).map((key) => {
+                                const isActive = key === activeSort;
+                                return (
+                                    <Link
+                                        key={key}
+                                        href={buildHref({ sort: key })}
+                                        scroll={false}
+                                        aria-current={isActive ? "true" : undefined}
+                                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                                            isActive
+                                                ? "bg-[var(--gajju-teal-deep)] text-cream"
+                                                : "bg-cream-soft border border-cream-deep text-ink-soft hover:border-ink-mute"
+                                        }`}
+                                    >
+                                        {SORT_OPTIONS[key].label}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                        {totalCount != null && (
+                            <span className="ml-auto text-xs text-ink-mute">
+                                {totalCount} {totalCount === 1 ? "product" : "products"}
+                            </span>
+                        )}
+                    </div>
 
             {products && products.length > 0 ? (
                 <>
@@ -338,6 +391,8 @@ export default async function ProductsPage({ searchParams }: Props) {
                     )}
                 </div>
             )}
+                </div>
+            </div>
         </div>
     );
 }
