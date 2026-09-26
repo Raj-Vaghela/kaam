@@ -5,7 +5,7 @@ import { toProduct } from "@/types";
 import { BRAND } from "@/lib/brand";
 import Link from "next/link";
 import { CATEGORIES } from "@/data/mockData";
-import FilterSidebar, { type FilterGroup } from "@/components/product/FilterSidebar";
+import FilterBar, { type FilterGroup } from "@/components/product/FilterBar";
 
 export const revalidate = 60; // revalidate product listings every 60 seconds
 
@@ -257,46 +257,18 @@ export default async function ProductsPage({ searchParams }: Props) {
                 </p>
             </div>
 
-            <div className="flex items-start gap-0">
-                <FilterSidebar
-                    groups={filterGroups}
-                    activeCount={activeFilterCount}
-                    clearHref={buildHref({ category: null, price: null, stock: null })}
-                />
-
-                <div className="flex-1 min-w-0">
-                    {/* Sort bar. Links rather than a select so each sort order is
-                        its own URL and the page needs no JS to change order. */}
-                    <div className="mb-7 flex flex-wrap items-center gap-x-5 gap-y-3 pb-4 border-b border-cream-deep">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-mute mr-1">
-                                Sort
-                            </span>
-                            {(Object.keys(SORT_OPTIONS) as SortKey[]).map((key) => {
-                                const isActive = key === activeSort;
-                                return (
-                                    <Link
-                                        key={key}
-                                        href={buildHref({ sort: key })}
-                                        scroll={false}
-                                        aria-current={isActive ? "true" : undefined}
-                                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                                            isActive
-                                                ? "bg-[var(--gajju-teal-deep)] text-cream"
-                                                : "bg-cream-soft border border-cream-deep text-ink-soft hover:border-ink-mute"
-                                        }`}
-                                    >
-                                        {SORT_OPTIONS[key].label}
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                        {totalCount != null && (
-                            <span className="ml-auto text-xs text-ink-mute">
-                                {totalCount} {totalCount === 1 ? "product" : "products"}
-                            </span>
-                        )}
-                    </div>
+            <FilterBar
+                filterGroups={filterGroups}
+                sortLinks={(Object.keys(SORT_OPTIONS) as SortKey[]).map((key) => ({
+                    label: SORT_OPTIONS[key].label,
+                    href: buildHref({ sort: key }),
+                    active: key === activeSort,
+                }))}
+                activeSortLabel={SORT_OPTIONS[activeSort].label}
+                activeFilterCount={activeFilterCount}
+                clearHref={buildHref({ category: null, price: null, stock: null })}
+                totalCount={totalCount ?? null}
+            />
 
             {products && products.length > 0 ? (
                 <>
@@ -391,8 +363,6 @@ export default async function ProductsPage({ searchParams }: Props) {
                     )}
                 </div>
             )}
-                </div>
-            </div>
         </div>
     );
 }
